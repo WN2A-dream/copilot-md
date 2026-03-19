@@ -10,15 +10,17 @@ tools: [execute/runInTerminal, read, search]
 
 ## 引数
 
+- `task-id`: タスクID
 - `plan-filepath-array`: 計画ファイルパスの配列
 - `development-result-filepath-array`: 開発結果ファイルパスの配列
 
 ## 処理
 
 1. 各計画ファイルと開発結果ファイルを読み、変更内容を把握する
-2. `git status` で変更ファイルを確認する
-3. 変更ファイルを `git add` する
-4. 計画・実装内容をもとにコミットメッセージを作成して `git commit` する
+1. `git status` で変更ファイルを確認する
+1. 新規ブランチ `feature/ai/<task-id>` を作成する
+1. 変更ファイルを `git add` する
+1. 計画・実装内容をもとにコミットメッセージを作成して `git commit` する
 
 ## コミットメッセージ規則
 

@@ -16,7 +16,7 @@ tools: [read, edit, search, todo]
 ## 処理
 
 1. `plan-filepath` の計画ファイルを読む
-2. `.copilot-work/docs` のドキュメントを参照して実装方針を確認する
+2. `.copilot-docs` のドキュメントを参照して実装方針を確認する
 3. 計画の実装手順に従ってコードを実装する
 4. エラーがある場合は修正する
 5. 開発結果を `.copilot-work/work/[task-id]/developments/[plan-basename]-result.md` に作成する

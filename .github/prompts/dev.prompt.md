@@ -60,4 +60,4 @@ agent: agent
 - **/reviewer-performance**: 引数: `task-id, development-result-filepath-array`, 返り値: `review-result-filepath`
 - **/evaluator**: 引数: `task-id, review-result-filepath-array`, 返り値: `eval-result`
 - **/documenter**: 引数: `development-result-filepath-array`
-- **/committer**: 引数: `plan-filepath-array, development-result-filepath-array`
+- **/committer**: 引数: `task-id, plan-filepath-array, development-result-filepath-array`

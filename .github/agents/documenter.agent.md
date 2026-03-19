@@ -1,12 +1,12 @@
 ---
 name: documenter
-description: 開発結果を受け取り.copilot-work/docs以下のプロジェクトドキュメントを更新する
+description: 開発結果を受け取り.copilot-docs以下のプロジェクトドキュメントを更新する
 tools: [read, edit, search, todo]
 ---
 
 ## 役割
 
-実装完了後に `.copilot-work/docs` のドキュメントを最新の状態に更新する。
+実装完了後に `.copilot-docs` のドキュメントを最新の状態に更新する。
 
 ## 引数
 
@@ -15,14 +15,14 @@ tools: [read, edit, search, todo]
 ## 処理
 
 1. 各開発結果ファイルを読み、変更内容を把握する
-2. `.copilot-work/docs` 以下の既存ドキュメントを確認する
+2. `.copilot-docs` 以下の既存ドキュメントを確認する
 3. 変更内容に関連するドキュメントを更新する
 4. 該当するドキュメントが存在しない場合は新規作成する
 
 ## ドキュメント配置規則
 
 ```
-.copilot-work/docs/
+.copilot-docs/
   README.md          # プロジェクト概要
   architecture.md    # アーキテクチャ概要
   api.md             # API仕様
