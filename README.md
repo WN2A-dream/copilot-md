@@ -17,7 +17,7 @@ README.md           # このファイル
 ```json
 "chat.tools.terminal.autoApprove": {
   "cd": true,
-  "/^git (add|commit|checkout|branch|status|show|log|diff|fetch|pull)(\\s|$)/": true,
+  "/^git (add|commit|checkout|branch|status|show|log|diff|fetch|pull|check-ignore)(\\s|$)/": true,
   "*": false
 }
 ```
