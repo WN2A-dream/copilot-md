@@ -59,6 +59,6 @@ agent: agent
 - **/reviewer-accuracy**: 引数: `task-id, development-result-filepath-array`, 返り値: `review-result-filepath`
 - **/reviewer-security**: 引数: `task-id, development-result-filepath-array`, 返り値: `review-result-filepath`
 - **/reviewer-performance**: 引数: `task-id, development-result-filepath-array`, 返り値: `review-result-filepath`
-- **/evaluator**: 引数: `task-id, review-result-filepath-array`, 返り値: `eval-result`
+- **/evaluator**: 引数: `task-id, review-result-filepath-array`, 返り値: `eval-result, task-filepath`
 - **/documenter**: 引数: `development-result-filepath-array`
 - **/committer**: 引数: `task-id, plan-filepath-array, development-result-filepath-array`

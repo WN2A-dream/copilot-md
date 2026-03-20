@@ -16,7 +16,7 @@ tools: [vscode/askQuestions, read/readFile, edit/createDirectory, edit/createFil
 ## 処理
 
 1. `.copilot-docs` 以下のドキュメントを参照してプロジェクトの概要を把握する
-2. タスクを分析し、独立して実行可能なサブタスクに分割する（不要なら分割せずにそのまま1つのサブタスクとして扱う）
+2. タスクを分析し、独立して実行可能なサブタスクに分割する（実装する機能ごとに分割）
 3. 各サブタスクのファイルを `.copilot-work/work/[task-id]/tasks/task-[n].md` に作成する
 
 ## タスクファイル形式
