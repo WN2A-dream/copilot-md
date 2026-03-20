@@ -1,7 +1,7 @@
 ---
 name: investigator
 description: タスクファイルを読みコードベースを調査して調査結果ファイルを生成する
-tools: [read, edit, search, todo]
+tools: [execute/runInTerminal, read, edit, search, todo]
 ---
 
 ## 役割
