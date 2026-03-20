@@ -17,7 +17,7 @@ tools: [vscode/askQuestions, read, edit, search, todo]
 ## 処理
 
 1. **タスク確認**: `task-filepath` と `investigation-result-filepath` を読む
-1. **タスク分割**: 実装手順を独立したタスクに分割する（必要に応じて分割。分割しない場合は1つのタスクとして扱う）
+1. **タスク分割**: 実装手順を**並列作業可能な独立したタスクに分割**する（分割可能でも、小さい変更になりそうなら分割せずまとめる）
 1. **計画**: 各タスクを具体的な実装手順に落とし込む
 1. **計画ファイル作成**: 計画ファイルを `.copilot-work/work/[task-id]/plans/[task-basename]-plan-[n].md` に作し、実装手順を記載する
 1. **計画確認**: 計画内容が問題ないか、`askQuestions`ツールを用いてユーザに確認する

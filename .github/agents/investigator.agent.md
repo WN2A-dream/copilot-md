@@ -11,14 +11,14 @@ tools: [read, edit, search, todo]
 ## 引数
 
 - `task-id`: タスクID
-- `task-filepath`: タスクファイルのパス
+- `task`: タスクの内容
 
 ## 処理
 
-1. `task-filepath` のタスクファイルを読む
+1. `task` の内容を読む
 2. `.copilot-docs` のドキュメントを参照してプロジェクト構造を把握する
 3. 関連するファイル・関数・クラスをコードベースから検索・調査する
-4. 調査結果を `.copilot-work/work/[task-id]/investigations/[task-basename]-investigation.md` に作成する
+4. 調査結果を `.copilot-work/work/[task-id]/investigations/investigation.md` に作成する
 
 ## 調査結果ファイル形式
 
@@ -42,4 +42,4 @@ tools: [read, edit, search, todo]
 
 `investigation-result-filepath` を文字列で出力する。
 
-例: `.copilot-work/work/[task-id]/investigations/task-1-investigation.md`
+例: `.copilot-work/work/[task-id]/investigations/investigation.md`
