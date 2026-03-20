@@ -18,7 +18,7 @@ tools: [execute/runInTerminal, read, edit, search, todo]
 1. `task` の内容を読む
 2. `.copilot-docs` のドキュメントを参照してプロジェクト構造を把握する
 3. 関連するファイル・関数・クラスをコードベースから検索・調査する
-4. 調査結果を `.copilot-work/work/[task-id]/investigations/investigation.md` に作成する
+4. 調査結果を `.copilot-work/work/[task-id]/investigations/investigation.md` に作成する。再調査時は末尾に`-re[n]`を付与してファイルを分ける（例: `investigation-re1.md`）
 
 ## 調査結果ファイル形式
 
