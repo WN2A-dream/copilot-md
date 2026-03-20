@@ -9,28 +9,29 @@ agent: agent
 ## ルール
 
 - **下記フローを厳守して順次実行**すること
-- 最初に`task-id`を生成し、各エージェントに通知すること。task-idは一意かつ、概要を表す英数字の文字列とすること（例: `feature-login-system-001`、`bugfix-null-pointer-002`、`refactor-auth-module-003`）
-- **引数と返り値を厳守**すること。それ以外を読み取ったり、返したりしないこと
+- **引数と返り値を厳守**すること。
+- **自分でファイルやgitを確認したり操作したりしない**こと
 
 ## フロー
+
+1. 最初に`task-id`を生成。task-idは一意かつ、概要を表す英数字の文字列（例: `feature-login-system-001`、`bugfix-null-pointer-002`、`refactor-auth-module-003`）
 1. plan-result = ng
 1. while plan-result is ng
-    1. **調査**: `runSubagent`ツールを用いて、/investigator エージェントを呼び出す
-    1. **設計**: `runSubagent`ツールを用いて、/planner エージェントを呼び出す。分割されたタスクの計画ファイルリスト`plan-filepath-array`と、計画の評価結果`plan-result`を受け取る
+    1. **現状調査**: `runSubagent`ツールを用いて、/investigator エージェントを呼び出す
+    1. **設計・実装計画**: `runSubagent`ツールを用いて、/planner エージェントを呼び出す。分割されたタスクの計画ファイルリスト`plan-filepath-array`と、計画の評価結果`plan-result`を受け取る
 1. while true
     1. **開発**: `runSubagent`ツールを用いて、/developer エージェントを計画ファイル`plan-filepath-array`の要素ごとに**非同期・並列で**呼び出す
-    1. **レビュー1**: 開発のすべてのタスクが完了したら、`runSubagent`ツールを用いて、下記エージェントを**非同期・並列で**呼び出す。各レビューを受け取ってreview-resultに格納する
+    1. **レビュー**: 開発のすべてのタスクが完了したら、`runSubagent`ツールを用いて、下記エージェントを**非同期・並列で**呼び出す。各レビューを受け取ってreview-resultに格納する
         - **単一責任の原則レビュー**: /reviewer-solid エージェント。review-resultを受け取る
         - **オープン・クローズドの原則レビュー**: /reviewer-open-closed エージェント exc. バグの修正時は呼び出さないreview-resultを受け取る
         - **リスコフの置換原則レビュー**: /reviewer-liskov エージェント。review-resultを受け取る
         - **インターフェース分離の原則レビュー**: /reviewer-interface エージェント。review-resultを受け取る
         - **依存関係逆転の原則レビュー**: /reviewer-dependency エージェント。review-resultを受け取る
-    1. **レビュー2**: レビュー1のすべてのタスクが完了したら、`runSubagent`ツールを用いて、下記エージェントを**非同期・並列で**呼び出す。各レビューを受け取ってreview-resultに格納する
         - **可読性レビュー**: /reviewer-readability エージェント。review-resultを受け取る
         - **正確性レビュー**: /reviewer-accuracy エージェント。review-resultを受け取る
         - **セキュリティレビュー**: /reviewer-security エージェント。review-resultを受け取る
         - **パフォーマンスレビュー**: /reviewer-performance エージェント。review-resultを受け取る
-    1. **評価**: レビュー2のすべてのタスクが完了したら、`runSubagent`ツールを用いて、/evaluator エージェントを呼び出して評価を依頼する。評価結果`eval-result`を受け取る
+    1. **評価**: レビューのすべてのタスクが完了したら、`runSubagent`ツールを用いて、/evaluator エージェントを呼び出して評価を依頼する。評価結果`eval-result`を受け取る
     1. if eval-result is ok
         1. break
     1. else
