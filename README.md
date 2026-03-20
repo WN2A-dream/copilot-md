@@ -11,3 +11,13 @@
   prompts/          # プロンプト定義ファイル
 README.md           # このファイル
 ```
+
+## vscode settign.json
+
+```json
+"chat.tools.terminal.autoApprove": {
+  "cd": true,
+  "/^git (add|commit|checkout|branch|status|show|log|diff|fetch|pull)(\\s|$)/": true,
+  "*": false
+}
+```

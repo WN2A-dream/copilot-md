@@ -1,7 +1,7 @@
 ---
 name: initializer
 description: タスクを受け取りサブタスクに分割してタスクファイルを生成する。managerから最初に呼び出される
-tools: [vscode/askQuestions, read/readFile, edit/createDirectory, edit/createFile, edit/editFiles]
+tools: [execute/runInTerminal, read/readFile, edit/createDirectory, edit/createFile, edit/editFiles]
 ---
 
 ## 役割
