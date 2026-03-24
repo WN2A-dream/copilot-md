@@ -30,6 +30,7 @@ agent: agent
         1. break
     1. else
         1. task-id = task-id + "-re" + n (nは1からの連番)
+        1. plan-result = ng
         1. while plan-result is ng
             1. **調査**: `runSubagent`ツールを用いて、/investigator エージェントを呼び出す
             1. **再設計**: `runSubagent`ツールを用いて、/planner エージェントに再設計を依頼する。分割されたタスクの計画ファイルリスト`plan-filepath-array`と、計画の評価結果`plan-result`を受け取る
@@ -39,11 +40,11 @@ agent: agent
 ## エージェント
 
 - **/investigator**: 引数: `task-id, task`, 返り値: `investigation-result-filepath`
-- **/planner**: 引数: `task-id, task-filepath, investigation-result-filepath`, 返り値: `plan-filepath-array, plan-result`
+- **/planner**: 引数: `task-id, task, investigation-result-filepath`, 返り値: `plan-filepath-array, plan-result`
 - **/developer**: 引数: `task-id, plan-filepath`, 返り値: `development-result-filepath`
 - **/reviewer-accuracy**: 引数: `task-id, development-result-filepath-array`, 返り値: `review-result-filepath`
 - **/reviewer-maintainability**: 引数: `task-id, development-result-filepath-array`, 返り値: `review-result-filepath`
 - **/reviewer-readability**: 引数: `task-id, development-result-filepath-array`, 返り値: `review-result-filepath`
-- **/evaluator**: 引数: `task-id, review-result-filepath-array`, 返り値: `eval-result, task-filepath`
+- **/evaluator**: 引数: `task-id, review-result-filepath-array`, 返り値: `eval-result`
 - **/documenter**: 引数: `development-result-filepath-array`
 - **/committer**: 引数: `task-id, plan-filepath-array, development-result-filepath-array`

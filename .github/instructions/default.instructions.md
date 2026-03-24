@@ -18,13 +18,12 @@ project-root/
   .copilot-work/      # Copilot関連の作業ファイル
     work/
       [task-id]/
-        tasks/           # タスクファイル
         investigations/  # 調査結果ファイル
         plans/           # 計画ファイル
         developments/     # 開発結果ファイル
         reviews/         # レビューファイル
         evaluations/      # 評価ファイル
-    docs/              # プロジェクトドキュメント
+  .copilot-docs/           # プロジェクトドキュメント
   .github/
     agents/           # エージェント定義ファイル
     instructions/     # コーディングガイドラインなどの指示ファイル

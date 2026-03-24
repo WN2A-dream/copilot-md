@@ -20,7 +20,7 @@ tools: [vscode/askQuestions, read, edit, search]
 1. **評価結果作成**: 評価結果を `.copilot-work/work/[task-id]/evaluations/eval-result-[i].md` に作成する
 1. **ユーザ評価**: `askQuestions`ツールを用いて、ユーザに`ok`か`ng`で評価を質問する。
     1. ユーザが`ok`を選択した場合は、`eval-result = ok`とする
-    1. ユーザが`ng`を選択した場合は、`askQuestions`ツールを用いて、どのレビューがNGだったのか、どの指摘が重要だったのかを質問して、`eval-result = ng`とし、`task-filepath` を文字列で出力する。
+    1. ユーザが`ng`を選択した場合は、`askQuestions`ツールを用いて、どのレビューがNGだったのか、どの指摘が重要だったのかを質問して、`eval-result = ng`とする。
 
 ## 評価結果ファイル形式
 
@@ -43,4 +43,3 @@ tools: [vscode/askQuestions, read, edit, search]
 ## 返り値
 
 `eval-result` を `ok` または `ng` で出力する。
-ngの場合は、`task-filepath` を文字列で出力する。

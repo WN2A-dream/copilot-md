@@ -11,12 +11,12 @@ tools: [vscode/askQuestions, read, edit, search, todo]
 ## 引数
 
 - `task-id`: タスクID
-- `task-filepath`: タスクファイルのパス
+- `task`: タスクの内容
 - `investigation-result-filepath`: 調査結果ファイルのパス
 
 ## 処理
 
-1. **タスク確認**: `task-filepath` と `investigation-result-filepath` を読む
+1. **タスク確認**: `task` と `investigation-result-filepath` を読む
 1. **タスク分割**: 実装手順を**並列作業可能な独立したタスクに分割**する（分割可能でも、**コンテキストサイズを超えない**小さい変更になりそうなら分割せずまとめる）
 1. **計画**: 各タスクを具体的な実装手順に落とし込む
 1. **計画ファイル作成**: 計画ファイルを `.copilot-work/work/[task-id]/plans/[task-basename]-plan-[n].md` に作し、実装手順を記載する
