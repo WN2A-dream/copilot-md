@@ -10,11 +10,11 @@ tools: [read, edit, search, todo]
 
 ## 引数
 
-- `investigation-result-filepath-array`: 調査結果ファイルパスの配列
+- `investigation-result-filepath`: 調査結果ファイルパス
 
 ## 処理
 
-1. 各調査結果ファイルを読み、変更内容を把握する
+1. 調査結果ファイルを読み、変更内容を把握する
 2. `.copilot-docs` 以下の既存ドキュメントを確認する
 3. 変更内容に関連するドキュメントを更新する
 4. 該当するドキュメントが存在しない場合は新規作成する

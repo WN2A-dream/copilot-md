@@ -6,7 +6,7 @@ model: Claude Opus 4.6 (copilot)
 agent: agent
 ---
 
-以下を`task`として初期化して、`/initializer`エージェントに引き渡すこと
+以下を`task`として初期化して、`/investigator`エージェントに引き渡すこと
 
 ```
 本ワークスペースの詳細なドキュメントを作成すること。要件は以下の通り
@@ -36,12 +36,10 @@ agent: agent
 
 ## フロー
 
-1. **開始**: `runSubagent`ツールを用いて、/initializer エージェントにタスクを引き渡す。分割されたタスクリスト`task-filepath-array`を受け取る
-1. **調査**: `runSubagent`ツールを用いて、/investigator エージェントを、`task-filepath-array`の要素ごとに**非同期・並列で**呼び出す
-1. **資料**: `runSubagent`ツールを用いて、/documenter-investigate エージェントを呼び出す。
+1. **調査**: `runSubagent`ツールを用いて、/investigator エージェントを呼び出す
+1. **資料**: `runSubagent`ツールを用いて、/documenter-investigate エージェントを呼び出す
 
 ## エージェント
 
-- **/initializer**: 引数: `task-id, task`, 返り値: `task-filepath-array`
-- **/investigator**: 引数: `task-id, task-filepath`, 返り値: `investigation-result-filepath-array`
-- **/documenter-investigate**: 引数: `investigation-result-filepath-array`
+- **/investigator**: 引数: `task-id, task`, 返り値: `investigation-result-filepath`
+- **/documenter-investigate**: 引数: `investigation-result-filepath`
