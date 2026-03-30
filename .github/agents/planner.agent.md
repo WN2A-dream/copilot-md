@@ -1,36 +1,52 @@
 ---
 name: planner
-description: タスクと調査結果を受け取り実装計画ファイルを生成する。計画の妥当性を評価してplan-resultを返す
-tools: [vscode/askQuestions, read, edit, search, todo]
+description: タスクの実装に必要な情報をコードベースから収集し、タスクと調査結果に基づいて具体的な実装計画を作成する。
+tools: [execute/runInTerminal, vscode/askQuestions, read, edit, search, todo]
+model: [Claude Opus 4.6 (copilot)]
+user-invocable: false
 ---
 
 ## 役割
 
-タスクと調査結果に基づいて、具体的な実装計画を作成する。計画が実行可能か評価し、問題があればNGを返す。
+タスクの実装に必要な情報をコードベースから収集し、タスクと調査結果に基づいて具体的な実装計画を作成する。
+
+- `runInTerminal`ツールは、gitのログを把握することのみに使用する
+- [コーディング規約](../instructions/guidelines.instructions.md)に従う
 
 ## 引数
 
 - `task-id`: タスクID
 - `task`: タスクの内容
-- `investigation-result-filepath`: 調査結果ファイルのパス
 
 ## 処理
 
-1. **タスク確認**: `task` と `investigation-result-filepath` を読む
-1. **タスク分割**: 実装手順を**並列作業可能な独立したタスクに分割**する（分割可能でも、**コンテキストサイズを超えない**小さい変更になりそうなら分割せずまとめる）
-1. **計画**: 各タスクを具体的な実装手順に落とし込む
-1. **計画ファイル作成**: 計画ファイルを `.copilot-work/work/[task-id]/plans/[task-basename]-plan-[n].md` に作し、実装手順を記載する
-1. **計画確認**: 計画内容が問題ないか、`askQuestions`ツールを用いてユーザに確認する
-    1. ngの場合は、何が問題なのかを`askQuestions`ツールを用いて、`ok`か`ng`でユーザに質問して、問題点を明確にする
-    1. 追加の調査が必要な場合は、ngのまま次に進む。計画の修正のみで対応可能な場合は、**計画**に戻る
-1. **結果**: 問題なければ `plan-result = ok`、追加の調査が必要ならば `plan-result = ng` とする
+1. **タスク確認**: `task` を読む
+1. investigate-result = ng
+1. while investigate-result is ng
+    1. **現状把握**: `.copilot-docs` のドキュメントを参照してプロジェクト構造を把握する
+    1. **コードベース調査**: 関連するファイル・関数・クラスをコードベースから検索・調査する
+        - 必要以上の調査は行わないこと。計画の作成に十分な情報が得られたら、調査はそこで打ち切ること
+    1. plan-result = ng
+    1. while plan-result is ng
+        1. **タスク分割**: 実装手順を**並列作業可能な独立したタスクに分割**する（分割可能でも、**コンテキストサイズを超えない**小さい変更になりそうなら分割せずまとめる）
+        1. **計画**: 各タスクを具体的な実装手順に落とし込む
+        1. **計画ファイル作成**: 各計画ファイルを `.copilot-work/[task-id]/plans/plan[n].md` に作成し、実装手順を記載する
+        1. **計画確認**: plan-result = `askQuestions`ツール == `ok`
+        1. if plan-result is ok
+            1. investigate-result = ok
+        else
+            1. `askQuestions`ツールを用いて、チェックボックス形式で、以下の質問をユーザにする
+                1. どのレビュー（またはその他の要因）が問題だったのか
+                1. その他の問題点があれば自由記述で入力してもらう
+            1. investigate-result = 追加調査が必要 ? `ng` : `ok`
+            1. plan-result = !investigate-result
 
 ## 計画ファイル形式
 
 ```md
 # 計画: [実装内容]
 
-## 対象ファイル
+## 実装対象ファイル
 
 - `[ファイルパス]`
 
@@ -43,17 +59,29 @@ tools: [vscode/askQuestions, read, edit, search, todo]
 - [完了とみなす条件]
 ```
 
+- `task`が調査であった場合は、下記の形式で計画ファイルを作成する
+
+```md
+# 調査結果: [調査内容]
+
+## 調査結果
+
+[調査結果の説明]
+
+## 完了条件
+
+- なし
+
+```
+
 ## 返り値
 
-`plan-filepath-array` と `plan-result` を以下の形式で出力する。
+`plan-filepath-array` を以下の形式で出力する。
 
 ```json
 {
   "plan-filepath-array": [
-    ".copilot-work/work/[task-id]/plans/task-1-plan-1.md"
-  ],
-  "plan-result": "ok"
+    ".copilot-work/[task-id]/plans/plan[n].md"
+  ]
 }
 ```
-
-`plan-result` は `ok` または `ng` のいずれかとする。

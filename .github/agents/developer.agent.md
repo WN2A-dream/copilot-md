@@ -2,6 +2,8 @@
 name: developer
 description: 計画ファイルを読んでコードを実装し開発結果ファイルを生成する
 tools: [read, edit, search, todo]
+model: [Claude Opus 4.6 (copilot)]
+user-invocable: false
 ---
 
 ## 役割
@@ -19,7 +21,7 @@ tools: [read, edit, search, todo]
 2. `.copilot-docs` のドキュメントを参照して実装方針を確認する
 3. 計画の実装手順に従ってコードを実装する
 4. エラーがある場合は修正する
-5. 開発結果を `.copilot-work/work/[task-id]/developments/[plan-basename]-result.md` に作成する
+5. 開発結果を `.copilot-work/[task-id]/devs/dev[n].md` に作成する
 
 ## 開発結果ファイル形式
 
@@ -43,4 +45,4 @@ tools: [read, edit, search, todo]
 
 `development-result-filepath` を文字列で出力する。
 
-例: `.copilot-work/work/[task-id]/developments/task-1-plan-1-result.md`
+例: `.copilot-work/[task-id]/devs/dev[n].md`

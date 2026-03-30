@@ -2,11 +2,11 @@
 name: setup
 description: ワークスペースのドキュメントを構築するプロンプト
 tools: [vscode/askQuestions, agent, todo]
-model: Claude Opus 4.6 (copilot)
+model: [Claude Opus 4.6 (copilot)]
 agent: agent
 ---
 
-以下を`task`として初期化して、`/investigator`エージェントに引き渡すこと
+以下を`task`として初期化して、`/planner`エージェントに引き渡すこと
 
 ```
 本ワークスペースの詳細なドキュメントを作成すること。要件は以下の通り
@@ -24,22 +24,22 @@ agent: agent
 
 ### 出力形式
 - Markdown形式で作成
-- 図解は Mermaid、PlantUML、或いはテキスト図を使用
-- ハイアラーキーに従い、見出しレベルを適切に設定
+- 図解は Mermaid、或いはテキスト図を使用
+- 見出しレベルを適切に設定
 ```
 
 ## ルール
 
 - **下記フローを厳守して順次実行**すること
-- 最初に`task-id`を生成し、各エージェントに通知すること。task-idは一意かつ、概要を表す英数字の文字列とすること（例: `investigate-login-system-001`、`investigate-null-pointer-002`、`investigate-auth-module-003`）
+- 最初に`task-id`を生成し、各エージェントに通知すること。task-idは一意かつ、概要を表す英数字の文字列とすること（例: `setup-workspace-001`、`setup-environment-002`、`setup-documentation-003`）
 - **引数と返り値を厳守**すること。それ以外を読み取ったり、返したりしないこと
 
 ## フロー
 
-1. **調査**: `runSubagent`ツールを用いて、/investigator エージェントを呼び出す
-1. **資料**: `runSubagent`ツールを用いて、/documenter-investigate エージェントを呼び出す
+1. **調査**: `runSubagent`ツールを用いて、/planner エージェントを呼び出す
+1. **資料**: `runSubagent`ツールを用いて、/documenter エージェントを呼び出す。`development-result-filepath-array`には`plan-filepath-array`を渡すこと
 
 ## エージェント
 
-- **/investigator**: 引数: `task-id, task`, 返り値: `investigation-result-filepath`
-- **/documenter-investigate**: 引数: `investigation-result-filepath`
+- **/planner**: 引数: `task-id, task`, 返り値: `plan-filepath-array`
+- **/documenter**: 引数: `task-id, development-result-filepath-array`

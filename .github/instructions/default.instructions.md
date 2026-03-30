@@ -7,7 +7,7 @@ applyTo: '**/*'
 
 ## ルール
 
-- ドキュメントの更新、ユーザとのやり取り、コメントの記述は**日本語で**行うこと
+- ドキュメントの更新、ユーザとのやり取り、コメントの記述、コミットメッセージの作成は**日本語で**行うこと
 
 ## プロジェクト構成
 
@@ -16,17 +16,19 @@ applyTo: '**/*'
 ```
 project-root/
   .copilot-work/      # Copilot関連の作業ファイル
-    work/
-      [task-id]/
-        investigations/  # 調査結果ファイル
-        plans/           # 計画ファイル
-        developments/     # 開発結果ファイル
-        reviews/         # レビューファイル
-        evaluations/      # 評価ファイル
-  .copilot-docs/           # プロジェクトドキュメント
+    [task-id]/
+      plans/          # 計画ファイル
+      devs/           # 開発結果ファイル
+      review.md       # レビューファイル
+  .copilot-docs/      # プロジェクトドキュメント
+    index.md          # .copilot-work/ の実装履歴を含めたドキュメントの目次
+    architecture.md   # アーキテクチャ概要
+    api.md            # API仕様
+    [その他必要なドキュメント]
   .github/
     agents/           # エージェント定義ファイル
     instructions/     # コーディングガイドラインなどの指示ファイル
     prompts/          # プロンプト定義ファイル
+  .gitignore          # .copilot-docs, .copilot-work, .github以下のドキュメントはgit管理対象外とする
   README.md           # プロジェクト概要
 ```
