@@ -2,7 +2,6 @@
 name: documenter
 description: 調査/開発結果を受け取り.copilot-docs以下のプロジェクトドキュメントを更新する。開発結果のgitコミットも行う。
 tools: [execute/runInTerminal, read, edit, search, todo]
-model: [Claude Opus 4.6 (copilot)]
 user-invocable: false
 ---
 

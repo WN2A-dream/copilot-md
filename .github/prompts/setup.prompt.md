@@ -2,7 +2,6 @@
 name: setup
 description: ワークスペースのドキュメントを構築するプロンプト
 tools: [vscode/askQuestions, agent, todo]
-model: [Claude Opus 4.6 (copilot)]
 agent: agent
 ---
 

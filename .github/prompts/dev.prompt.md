@@ -2,7 +2,6 @@
 name: dev
 description: 開発タスクの管理と進行を担当するプロンプト。新機能の実装、バグの修正、コードのリファクタリング
 tools: [vscode/askQuestions, agent, todo]
-model: [Claude Opus 4.6 (copilot)]
 agent: agent
 ---
 

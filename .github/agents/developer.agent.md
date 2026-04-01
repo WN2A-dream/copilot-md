@@ -2,7 +2,6 @@
 name: developer
 description: 計画ファイルを読んでコードを実装し開発結果ファイルを生成する
 tools: [read, edit, search, todo]
-model: [Claude Opus 4.6 (copilot)]
 user-invocable: false
 ---
 
@@ -20,8 +19,7 @@ user-invocable: false
 1. `plan-filepath` の計画ファイルを読む
 2. `.copilot-docs` のドキュメントを参照して実装方針を確認する
 3. 計画の実装手順に従ってコードを実装する
-4. エラーがある場合は修正する
-5. 開発結果を `.copilot-work/[task-id]/devs/dev[n].md` に作成する
+4. 開発結果を `.copilot-work/[task-id]/devs/dev[n].md` に作成する
 
 ## 開発結果ファイル形式
 

@@ -2,7 +2,6 @@
 name: reviewer
 description: コードの正確性、保守性、可読性の観点でレビューしてレビュー結果ファイルを生成する
 tools: [read, edit, search, todo]
-model: [Claude Opus 4.6 (copilot)]
 user-invocable: false
 ---
 

@@ -12,7 +12,7 @@
 README.md           # このファイル
 ```
 
-## vscode settign.json
+## vscode settings.json
 
 ```json
 "chat.tools.terminal.autoApprove": {
