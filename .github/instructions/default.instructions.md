@@ -24,6 +24,7 @@ project-root/
     index.md          # .copilot-work/ の実装履歴を含めたドキュメントの目次
     architecture.md   # アーキテクチャ概要
     api.md            # API仕様
+    operation.md      # 運用イメージ・操作フロー
     [その他必要なドキュメント]
   .github/
     agents/           # エージェント定義ファイル

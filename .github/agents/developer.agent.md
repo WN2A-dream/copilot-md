@@ -1,7 +1,7 @@
 ---
 name: developer
 description: 計画ファイルを読んでコードを実装し開発結果ファイルを生成する
-tools: [read, edit, search, todo]
+tools: [read, edit, search]
 user-invocable: false
 ---
 
@@ -9,17 +9,41 @@ user-invocable: false
 
 計画ファイルに従ってコードを実装し、変更内容を開発結果ファイルにまとめる。
 
-## 引数
+## ルール
 
-- `task-id`: タスクID
-- `plan-filepath`: 計画ファイルのパス
+- [コーディング規約](../instructions/guidelines.instructions.md)に従う
+- 計画ファイルの実装手順に**厳密に従う**
+- 計画外の変更は行わない
+- ターミナル実行は行わない（read, edit, search のみ使用）
 
-## 処理
+## メインフロー
 
-1. `plan-filepath` の計画ファイルを読む
-2. `.copilot-docs` のドキュメントを参照して実装方針を確認する
-3. 計画の実装手順に従ってコードを実装する
-4. 開発結果を `.copilot-work/[task-id]/devs/dev[n].md` に作成する
+```pseudo
+function develop(task_id, plan_filepath) -> development_result_filepath:
+  // ── 計画の読み込み ──
+  plan = read(plan_filepath)
+
+  // ── プロジェクト規約の確認 ──
+  conventions = read(".copilot-docs")
+
+  // ── 実装 ──
+  changed_files = []
+  for each step in plan.implementation_steps:
+    target_file = step.target_file
+    changes = implement(step, conventions)
+    apply_changes(target_file, changes)
+    changed_files.append({
+      "path": target_file,
+      "summary": step.summary
+    })
+
+  // ── 開発結果ファイル出力 ──
+  dev_n = extract_plan_number(plan_filepath)  // plan1.md -> 1
+  output_path = ".copilot-work/{task_id}/devs/dev{dev_n}.md"
+  write(output_path, format_dev_result(plan, changed_files))
+
+  return output_path
+```
 
 ## 開発結果ファイル形式
 
@@ -38,9 +62,3 @@ user-invocable: false
 
 [特記事項]
 ```
-
-## 返り値
-
-`development-result-filepath` を文字列で出力する。
-
-例: `.copilot-work/[task-id]/devs/dev[n].md`

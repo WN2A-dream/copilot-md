@@ -1,52 +1,55 @@
 ---
 name: planner
-description: タスクの実装に必要な情報をコードベースから収集し、タスクと調査結果に基づいて具体的な実装計画を作成する。
-tools: [vscode/askQuestions, execute/runInTerminal, read, agent, edit, search, todo]
+description: "タスクと調査結果に基づいて具体的な実装計画を作成する。orchestratorから呼び出されるリーフエージェント"
+tools: [read, edit, search]
 user-invocable: false
 ---
 
 ## 役割
 
-タスクの実装に必要な情報をコードベースから収集し、タスクと調査結果に基づいて具体的な実装計画を作成する。
+調査結果ファイルを読み、タスクの具体的な実装計画を作成する。
 
-- `runInTerminal`ツールは、**gitのログを把握することのみ**に使用する
+## ルール
+
 - [コーディング規約](../instructions/guidelines.instructions.md)に従う
+- 分割可能でも**コンテキストサイズを超えない**小さい変更は分割せずまとめる
+- 各計画は**並列作業可能な独立したタスク**にする
 
-## 引数
+## メインフロー
 
-- `task-id`: タスクID
-- `task`: タスクの内容
+```pseudo
+function plan(task_id, task, investigation_filepath) -> PlanResult:
+  // ── 調査結果の確認 ──
+  investigation = read(investigation_filepath)
 
-## 処理
+  // ── タスク種別判定 ──
+  task_type = classify_task_type(task)
 
-1. **タスク確認**: `task` を読む
-1. **スコーピング**: `task` の内容と、`.copilot-docs` から、調査、計画に必要なコンテキストサイズ(task.contextSize)を見積もる
-if agent.contextSize < task.contextSize になりそうな場合 && depth < 3 なら
-    1. taskを分割し、task-map<task-id-[n], task> を作成する
-    1. `runSubagent`ツールを用いて、/planner エージェントを`task-map`の要素ごとに**非同期・並列で**呼び出す。引数は `task-id` と `task`
-    1. 各サブタスクの計画ファイルリストを受け取り、`plan-filepath-array` にまとめる
-else
-    1. investigate-result = ng
-    1. while investigate-result is ng
-        1. **現状把握**: `.copilot-docs` のドキュメントを参照してプロジェクト構造を把握する
-        1. **コードベース調査**: 関連するファイル・関数・クラスをコードベースから検索・調査する
-            - 関連ファイル外の調査は行わないこと。計画の作成に十分な情報が得られたら、調査はそこで打ち切ること
-        1. plan-result = ng
-        1. while plan-result is ng
-            1. **タスク分割**: 実装手順を**並列作業可能な独立したタスクに分割**する（分割可能でも、**コンテキストサイズを超えない**小さい変更になりそうなら分割せずまとめる）
-            1. **計画**: 各タスクを具体的な実装手順に落とし込む
-            1. **計画ファイル作成**: 各計画ファイルを `.copilot-work/[task-id]/plans/plan[n].md` に作成し、実装手順を記載する
-            1. **計画確認**: plan-result = `askQuestions`ツール == `ok`
-            1. if plan-result is ok
-                1. investigate-result = ok
-            else
-                1. `askQuestions`ツールを用いて、チェックボックス形式で、以下の質問をユーザにする
-                    1. どのレビュー（またはその他の要因）が問題だったのか
-                    1. その他の問題点があれば自由記述で入力してもらう
-                1. investigate-result = 追加調査が必要 ? `ng` : `ok`
-                1. plan-result = !investigate-result
+  if task_type == "investigation":
+    // 調査タスクの場合: 調査結果をそのまま計画ファイルとして出力
+    plan_path = ".copilot-work/{task_id}/plans/plan1.md"
+    write(plan_path, format_investigation_plan(task, investigation))
+    return { "plan-filepath-array": [plan_path] }
+
+  // ── 実装タスクの分割 ──
+  subtasks = split_into_parallel_tasks(task, investigation)
+
+  // 小さい変更はまとめる
+  subtasks = merge_small_tasks(subtasks)
+
+  // ── 計画ファイル作成 ──
+  plan_filepath_array = []
+  for i, subtask in enumerate(subtasks):
+    plan_path = ".copilot-work/{task_id}/plans/plan{i+1}.md"
+    write(plan_path, format_plan(subtask))
+    plan_filepath_array.append(plan_path)
+
+  return { "plan-filepath-array": plan_filepath_array }
+```
 
 ## 計画ファイル形式
+
+### 実装タスクの場合
 
 ```md
 # 計画: [実装内容]
@@ -64,7 +67,7 @@ else
 - [完了とみなす条件]
 ```
 
-- `task`が調査であった場合は、下記の形式で計画ファイルを作成する
+### 調査タスクの場合
 
 ```md
 # 調査結果: [調査内容]
@@ -76,17 +79,4 @@ else
 ## 完了条件
 
 - なし
-
-```
-
-## 返り値
-
-`plan-filepath-array` を以下の形式で出力する。
-
-```json
-{
-  "plan-filepath-array": [
-    ".copilot-work/[task-id]/plans/plan[n].md"
-  ]
-}
 ```

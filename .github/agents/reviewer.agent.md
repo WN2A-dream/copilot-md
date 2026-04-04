@@ -1,7 +1,7 @@
 ---
 name: reviewer
 description: コードの正確性、保守性、可読性の観点でレビューしてレビュー結果ファイルを生成する
-tools: [read, edit, search, todo]
+tools: [read, edit, search]
 user-invocable: false
 ---
 
@@ -9,44 +9,54 @@ user-invocable: false
 
 変更されたコードにロジックの誤りや仕様との不整合がないか検証する。
 
-## 引数
+## ルール
 
-- `task-id`: タスクID
-- `development-result-filepath-array`: 開発結果ファイルパスの配列
-
-## 処理
-
-1. 各開発結果ファイルを読み、変更ファイルを特定する
-2. 変更ファイルを読み、後述する各観点でレビューする
-3. 問題箇所があれば指摘内容をまとめる
-4. レビュー結果を `.copilot-work/[task-id]/review.md` に作成する
+- コードの**修正は行わない**（レビュー結果ファイルの作成のみ）
+- 指摘は**具体的なファイル・行・コード片**を含めること
 
 ## レビュー観点
 
-### 正確性
+| カテゴリ | チェック項目 |
+|---|---|
+| 正確性 | ロジックが仕様通りか / 境界値・エッジケース / 計算・型変換・文字列処理 / 条件分岐の網羅性 |
+| 保守性 | SOLID原則（SRP, OCP, LSP, ISP, DIP） / セキュリティ（OWASP Top 10） / パフォーマンス |
+| 可読性 | 命名の明確さ（manager/helper等の曖昧名を避ける） / コメントの適切さ / 関数の短さ / ネストの浅さ |
 
-- ロジックが仕様・要件通りに実装されているか
-- 境界値・エッジケースが正しく処理されているか
-- 計算・型変換・文字列処理に誤りがないか
-- 条件分岐の網羅性に漏れがないか
+## メインフロー
 
-### 保守性
+```pseudo
+function review(task_id, dev_result_filepath_array) -> ReviewResult:
+  // ── 変更ファイルの特定 ──
+  all_changed_files = []
+  for each dev_filepath in dev_result_filepath_array:
+    dev_result = read(dev_filepath)
+    all_changed_files.extend(dev_result.changed_files)
 
-- SOLID原則
-  -  単一責任の原則 (SRP)
-  -  オープン・クローズドの原則 (OCP)
-  -  リスコフの置換原則 (LSP)
-  -  インターフェース分離の原則 (ISP)
-  -  依存関係逆転の原則 (DIP)
-- セキュリティ (OWASP Top 10 準拠)
-- パフォーマンス
+  // ── レビュー実行 ──
+  issues = []
+  for each file_info in all_changed_files:
+    code = read(file_info.path)
 
-### 可読性
+    // 各観点でチェック
+    issues.extend(check_correctness(code, file_info))
+    issues.extend(check_maintainability(code, file_info))
+    issues.extend(check_readability(code, file_info))
 
-- 変数名・関数名・クラス名が意図を明確に表しているか(managerやhelperなどの曖昧な名前を避ける)
-- 複雑なロジックに適切なコメントがあるか
-- 関数・メソッドが短く単純か（長すぎないか）
-- ネストが深すぎないか
+  // ── レビュー結果ファイル出力 ──
+  review_result = if issues.is_empty() then "ok" else evaluate_severity(issues)
+  output_path = ".copilot-work/{task_id}/review.md"
+  write(output_path, format_review(review_result, issues))
+
+  // ── 返り値の構築 ──
+  if review_result == "ok":
+    return { "review-result": "ok" }
+  else:
+    return {
+      "review-result": "ng",
+      "replan-task": "下記レビュー結果を踏まえて、修正してください\n\n"
+                   + "レビュー結果: .copilot-work/{task_id}/review.md"
+    }
+```
 
 ## レビュー結果ファイル形式
 
@@ -58,32 +68,6 @@ user-invocable: false
 ## 指摘事項
 
 | 重要度 | 種類 | 内容 |
-| --- | --- | --- |
+|---|---|---|
 | [高 / 中 / 低] | [正確性 / 保守性 / 可読性] | [指摘内容] |
-
-```
-
-## 返り値
-
-- `review-result`:  ok または ng を文字列で出力する
-- `replan-task`: ngの場合は、再計画が必要なタスク内容を下記形式の文字列で出力する。
-
-```txt
-下記レビュー結果を踏まえて、修正してください
-
-レビュー結果: `.copilot-work/[task-id]/review.md`
-```
-例: 
-
-```json
-{
-  "review-result": "ng",
-  "replan-task": "下記レビュー結果を踏まえて、修正してください\n\nレビュー結果: `.copilot-work/[task-id]/review.md`"
-}
-```
-
-```json
-{
-  "review-result": "ok"
-}
 ```
