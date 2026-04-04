@@ -2,7 +2,7 @@
 name: orchestrator
 description: "開発タスクの管理と進行を担当するエージェント。新機能の実装、バグの修正、コードのリファクタリング、ワークスペースの初期セットアップなどのタスクをサブエージェントに割り振り、完了まで管理する"
 tools: [vscode/askQuestions, agent, todo]
-agents: [splitter, investigator, planner, developer, reviewer, documenter]
+agents: [splitter, interviewer, investigator, planner, developer, reviewer, documenter]
 ---
 
 ## 役割
@@ -22,6 +22,7 @@ agents: [splitter, investigator, planner, developer, reviewer, documenter]
 | エージェント | 役割 | ツール |
 |---|---|---|
 | /splitter | タスク規模判定・分割 | read, search |
+| /interviewer | ユーザヒアリング・要件明確化 | askQuestions, read, edit, search |
 | /investigator | コードベース調査 | execute, read, edit, search |
 | /planner | 実装計画作成 | read, edit, search |
 | /developer | コード実装 | read, edit, search |
@@ -38,6 +39,7 @@ orchestrator はファイルの**パスのみ**を管理し、**中身は読ま�
 | ステップ | 出力先 | 次の消費者 |
 |---|---|---|
 | splitter | 返り値のみ（JSON） | orchestrator |
+| interviewer | `.copilot-work/[task-id]/hearing.md` | planner / documenter |
 | investigator | `.copilot-work/[task-id]/investigation.md` | planner |
 | planner | `.copilot-work/[task-id]/plans/plan[n].md` | developer |
 | developer | `.copilot-work/[task-id]/devs/dev[n].md` | reviewer |
@@ -78,6 +80,8 @@ function main(task):
 
   if mode == "setup":
     run_setup_flow(task_id, task)
+  else if mode == "design":
+    run_design_flow(task_id, task)
   else:
     run_development_flow(task_id, task)
 
@@ -87,11 +91,16 @@ function main(task):
 ### タスク分類
 
 ```pseudo
-function classify_task(task) -> "setup" | "development":
+function classify_task(task) -> "setup" | "design" | "development":
   // 以下に該当する場合は "setup"
   //   - ワークスペースの初期ドキュメント構築
   //   - プロジェクト構造の文書化
   //   - .copilot-docs の初期セットアップ
+  // 以下に該当する場合は "design"
+  //   - 要件が曖昧でユーザへのヒアリングが必要
+  //   - ストーリー・設定・キャラクター等の創作タスク
+  //   - 仕様策定・設計作業・アイデア具体化
+  //   - 「〜を作りたい」「〜を考えたい」のような探索的タスク
   // それ以外は "development"
 ```
 
@@ -111,6 +120,40 @@ function run_setup_flow(task_id, task):
   // セットアップでは developer/reviewer をスキップし、
   // 計画ファイルをそのまま documenter に渡す
   call /documenter(task_id, plan_filepath_array)
+```
+
+### 設計フロー
+
+```pseudo
+function run_design_flow(task_id, task):
+  // ── ヒアリング ──
+  hearing_filepath = call /interviewer(task_id, task)
+
+  // ── ヒアリング結果に基づく次のアクション ──
+  // ヒアリング結果を踏まえてユーザに次のステップを確認
+  next_action = askQuestions(
+    "ヒアリング結果をまとめました: " + hearing_filepath,
+    ["このまま実装に進む", "ドキュメントとして整理する", "ヒアリング結果だけで完了"]
+  )
+
+  if next_action == "このまま実装に進む":
+    // hearing.md を investigation.md の代替として開発フローへ接続
+    plan_filepath_array = call /planner(task_id, task, hearing_filepath)
+
+    user_approval = askQuestions("計画を確認してください", plan_filepath_array)
+    if user_approval == "ok":
+      dev_result_filepath_array = []
+      parallel for each plan_filepath in plan_filepath_array:
+        result = call /developer(task_id, plan_filepath)
+        dev_result_filepath_array.append(result)
+
+      review = call /reviewer(task_id, dev_result_filepath_array)
+      call /documenter(task_id, dev_result_filepath_array)
+
+  else if next_action == "ドキュメントとして整理する":
+    call /documenter(task_id, [hearing_filepath])
+
+  // "ヒアリング結果だけで完了" の場合は何もせず終了
 ```
 
 ### 開発フロー
