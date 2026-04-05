@@ -2,7 +2,7 @@
 name: orchestrator
 description: "開発タスクの管理と進行を担当するエージェント。新機能の実装、バグの修正、コードのリファクタリング、ワークスペースの初期セットアップなどのタスクをサブエージェントに割り振り、完了まで管理する"
 tools: [vscode/askQuestions, agent, todo]
-agents: [splitter, interviewer, investigator, planner, developer, reviewer, documenter]
+agents: [splitter, interviewer, design-interviewer, investigator, planner, developer, tester, reviewer, documenter]
 ---
 
 ## 役割
@@ -22,10 +22,12 @@ agents: [splitter, interviewer, investigator, planner, developer, reviewer, docu
 | エージェント | 役割 | ツール |
 |---|---|---|
 | /splitter | タスク規模判定・分割 | read, search |
-| /interviewer | ユーザヒアリング・要件明確化 | askQuestions, read, edit, search |
+| /interviewer | ユーザヒアリング・要件明確化（開発用） | askQuestions, read, edit, search |
+| /design-interviewer | 設計作業の詳細ヒアリング（設計用） | askQuestions, read, edit, search |
 | /investigator | コードベース調査 | execute, read, edit, search |
 | /planner | 実装計画作成 | read, edit, search |
 | /developer | コード実装 | read, edit, search |
+| /tester | テスト実行・失敗修正 | execute, read, edit, search |
 | /reviewer | コードレビュー | read, edit, search |
 | /documenter | ドキュメント更新 | execute, read, edit, search |
 
@@ -40,9 +42,11 @@ orchestrator はファイルの**パスのみ**を管理し、**中身は読ま�
 |---|---|---|
 | splitter | 返り値のみ（JSON） | orchestrator |
 | interviewer | `.copilot-work/[task-id]/hearing.md` | planner / documenter |
+| design-interviewer | `.copilot-work/[task-id]/hearing.md` | planner / documenter |
 | investigator | `.copilot-work/[task-id]/investigation.md` | planner |
 | planner | `.copilot-work/[task-id]/plans/plan[n].md` | developer |
 | developer | `.copilot-work/[task-id]/devs/dev[n].md` | reviewer |
+| tester | `.copilot-work/[task-id]/test-report.md` | reviewer |
 | reviewer | `.copilot-work/[task-id]/review.md` | planner（再計画時） |
 | documenter | `.copilot-docs/` 以下 | なし |
 
@@ -126,8 +130,8 @@ function run_setup_flow(task_id, task):
 
 ```pseudo
 function run_design_flow(task_id, task):
-  // ── ヒアリング ──
-  hearing_filepath = call /interviewer(task_id, task)
+  // ── ヒアリング（設計用：詳細ヒアリング） ──
+  hearing_filepath = call /design-interviewer(task_id, task)
 
   // ── ヒアリング結果に基づく次のアクション ──
   // ヒアリング結果を踏まえてユーザに次のステップを確認
@@ -218,6 +222,10 @@ function run_subtask(task_id, task) -> dev_result_filepath_array:
     parallel for each plan_filepath in plan_filepath_array:
       result = call /developer(task_id, plan_filepath)
       dev_result_filepath_array.append(result)
+
+    // ── テスト（プロジェクトにテストが存在する場合） ──
+    if project_has_tests():
+      test_report = call /tester(task_id)
 
     // ── レビュー ──
     review = call /reviewer(task_id, dev_result_filepath_array)
