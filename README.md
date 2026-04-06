@@ -1,6 +1,7 @@
 # Github Copilot Instructions
 
 本リポジトリは、個人用のGithub Copilotエージェントのプロジェクト構成例と、エージェントやプロンプト、指示ファイルのテンプレートを管理するものです
+ユーザフォルダの`.copilot`ディレクトリに配置し、VS Code Copilotエージェントの開発や管理に利用します。
 
 ## ディレクトリ構成
 
@@ -12,9 +13,8 @@
     devs/           # 開発結果ファイル
     review.md       # レビューファイル
 .copilot-docs/      # プロジェクトドキュメント
-.github/
-  agents/           # エージェント定義ファイル
-  instructions/     # コーディングガイドラインなどの指示ファイル
+agents/           # エージェント定義ファイル
+instructions/     # コーディングガイドラインなどの指示ファイル
 .vscode/
   mcp.json          # MCP サーバー設定
 .gitignore
@@ -57,4 +57,19 @@ VS Code Copilot エージェント向けのローカルコマンド実行 MCP（
 | dotnet | 5 | test, build, run, clean, restore |
 | ファイルユーティリティ | 1 | ファイル情報取得 |
 
-詳細は `.copilot-mcp/README.md` を参照。
+## mcp設定
+
+VS Code の `.vscode/mcp.json` で MCP サーバーの設定を行います。以下は例です。
+
+```json
+{
+  "servers": [
+    {
+      "name": "local-command",
+      "command": "node",
+      "args": ["C:/Users/[ユーザ名]/.copilot/.copilot-mcp/dist/index.js"],
+      "port": 5000
+    }
+  ]
+}
+```
