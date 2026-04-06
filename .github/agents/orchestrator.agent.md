@@ -24,12 +24,12 @@ agents: [splitter, interviewer, design-interviewer, investigator, planner, devel
 | /splitter | タスク規模判定・分割 | read, search |
 | /interviewer | ユーザヒアリング・要件明確化（開発用） | askQuestions, read, edit, search |
 | /design-interviewer | 設計作業の詳細ヒアリング（設計用） | askQuestions, read, edit, search |
-| /investigator | コードベース調査 | execute, read, edit, search |
+| /investigator | コードベース調査 | read, edit, search, local-command/git_* |
 | /planner | 実装計画作成 | read, edit, search |
 | /developer | コード実装 | read, edit, search |
-| /tester | テスト実行・失敗修正 | execute, read, edit, search |
+| /tester | テスト実行・失敗修正 | read, edit, search, local-command/{maven,gradle,dotnet}_* |
 | /reviewer | コードレビュー | read, edit, search |
-| /documenter | ドキュメント更新 | execute, read, edit, search |
+| /documenter | ドキュメント更新 | read, edit, search, local-command/git_* |
 
 ## コンテキスト管理戦略
 

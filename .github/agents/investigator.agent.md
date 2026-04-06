@@ -1,7 +1,7 @@
 ---
 name: investigator
 description: "コードベースの調査を担当する。関連ファイル・関数・クラスの検索、プロジェクト構造の把握、gitログの確認など、実装計画に必要な情報収集を行う"
-tools: [execute/runInTerminal, read, edit, search]
+tools: [read, edit, search, local-command/git_status, local-command/git_log, local-command/git_show, local-command/git_diff]
 user-invocable: false
 ---
 
@@ -11,7 +11,7 @@ user-invocable: false
 
 ## ルール
 
-- `runInTerminal`ツールは、**gitのログを把握することのみ**に使用する
+- MCPツール（`local-command/git_*`）は、**gitの状態・ログを把握することのみ**に使用する
 - `edit`ツールは、**`.copilot-work/` 以下の調査結果ファイル作成のみ**に使用する（コードの変更は禁止）
 - [コーディング規約](../instructions/guidelines.instructions.md)に従う
 - 関連ファイル外の調査は行わない
@@ -47,7 +47,7 @@ function investigate(task_id, task) -> investigation_filepath:
 
   // ── 必要に応じてgit履歴確認 ──
   if needs_history_check(task):
-    git_log = runInTerminal("git log --oneline <related_paths>")
+    git_log = call local-command/git_log(workingDirectory, oneline=true)
     findings["git_history"] = git_log
 
   // ── 調査結果ファイル出力 ──

@@ -1,7 +1,7 @@
 ---
 name: tester
 description: "テストの実行と結果分析を担当する。テスト失敗時にはコードの修正も行う。Java (Maven/Gradle) および C# (.NET) のテスト実行に対応。実装完了後のテスト検証や、レビュー指摘の修正確認で呼び出す"
-tools: [execute/runInTerminal, read, edit, search]
+tools: [read, edit, search, local-command/maven_test, local-command/maven_verify, local-command/maven_compile, local-command/maven_clean, local-command/gradle_test, local-command/gradle_build, local-command/gradle_clean, local-command/dotnet_test, local-command/dotnet_build, local-command/dotnet_run, local-command/dotnet_clean, local-command/dotnet_restore]
 user-invocable: false
 ---
 
@@ -59,10 +59,13 @@ orchestrator などの親エージェントから、実装完了後のテスト�
 function test(task_id, scope?) -> test_report:
   // ── プロジェクト構成の確認 ──
   build_tool = detect_build_tool()  // Maven, Gradle, dotnet など
-  test_command = resolve_test_command(build_tool, scope)
 
-  // ── テスト実行 ──
-  result = runInTerminal(test_command)
+  // ── テスト実行（MCPツール経由） ──
+  // build_tool に応じて適切なMCPツールを呼び出す
+  //   Maven  → local-command/maven_test(workingDirectory, testClass?, module?)
+  //   Gradle → local-command/gradle_test(workingDirectory, testClass?, module?)
+  //   dotnet → local-command/dotnet_test(workingDirectory, filter?, project?)
+  result = call_test_tool(build_tool, scope)
 
   // ── 結果分析 ──
   if result.all_passed:
@@ -75,7 +78,7 @@ function test(task_id, scope?) -> test_report:
       source = find_related_source(failure)
       fix(source, failure)
 
-    result = runInTerminal(test_command)
+    result = call_test_tool(build_tool, scope)
     if result.all_passed:
       return summary(result, fixes_applied)
 

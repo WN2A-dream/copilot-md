@@ -1,0 +1,7 @@
+# MCP サーバーのビルド成果物・依存パッケージ
+.copilot-mcp/node_modules/
+.copilot-mcp/dist/
+
+# Copilot ドキュメント・作業ファイル
+.copilot-docs/
+.copilot-work/

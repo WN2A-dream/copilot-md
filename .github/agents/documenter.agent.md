@@ -1,7 +1,7 @@
 ---
 name: documenter
 description: 調査/開発結果を受け取り.copilot-docs以下のプロジェクトドキュメントを更新する。
-tools: [execute/runInTerminal, read, edit, search]
+tools: [read, edit, search, local-command/git_status, local-command/git_diff, local-command/git_log]
 user-invocable: false
 ---
 
@@ -28,7 +28,7 @@ function document(task_id, dev_result_filepath_array) -> void:
 
   // ── 必要に応じてgit statusで現状確認 ──
   if needs_git_check(all_changes):
-    git_status = runInTerminal("git status")
+    git_status = call local-command/git_status(workingDirectory)
     all_changes = enrich_with_git_info(all_changes, git_status)
 
   // ── 既存ドキュメントの確認 ──

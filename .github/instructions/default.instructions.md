@@ -13,8 +13,9 @@ applyTo: '**/*'
 
 環境固有のプロジェクト構成は/README.mdを参照すること
 
-```
+```text
 project-root/
+  .copilot-mcp/       # local-command MCP サーバー
   .copilot-work/      # Copilot関連の作業ファイル
     [task-id]/
       plans/          # 計画ファイル
@@ -30,6 +31,8 @@ project-root/
     agents/           # エージェント定義ファイル
     instructions/     # コーディングガイドラインなどの指示ファイル
     prompts/          # プロンプト定義ファイル
+  .vscode/
+    mcp.json           # MCP サーバー設定
   .gitignore          # .copilot-docs, .copilot-work, .github以下のドキュメントはgit管理対象外とする
   README.md           # プロジェクト概要
 ```
