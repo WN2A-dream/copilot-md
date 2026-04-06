@@ -30,7 +30,6 @@ project-root/
   .github/
     agents/           # エージェント定義ファイル
     instructions/     # コーディングガイドラインなどの指示ファイル
-    prompts/          # プロンプト定義ファイル
   .vscode/
     mcp.json           # MCP サーバー設定
   .gitignore          # .copilot-docs, .copilot-work, .github以下のドキュメントはgit管理対象外とする

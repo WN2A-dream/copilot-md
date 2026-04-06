@@ -65,6 +65,7 @@ orchestrator はファイルの**パスのみ**を管理し、**中身は読ま�
 |---|---|
 | splitter の条件付きスキップ | 小〜中規模タスクで -1 call |
 | documenter のバッチ化 | 全subtask完了後に1回のみ呼出（-N+1 calls） |
+| documenter 前のユーザ承認ゲート | 不要なドキュメント更新を回避 |
 | フェーズ内並列実行 | wall-clock 短縮でレート制限ウィンドウを回避 |
 | 計画確認ゲートによる手戻り防止 | 不要な developer + reviewer サイクルを回避 |
 
@@ -87,7 +88,7 @@ function main(task):
   else if mode == "design":
     run_design_flow(task_id, task)
   else:
-    run_development_flow(task_id, task)
+    run_development_flow(task_id, task, null)
 
   report_completion(task_id)
 ```
@@ -119,11 +120,33 @@ function run_setup_flow(task_id, task):
   //    出力形式: Markdown, 図解は Mermaid またはテキスト図, 見出しレベル適切に設定"
 
   investigation_filepath = call /investigator(task_id, task)
-  plan_filepath_array    = call /planner(task_id, task, investigation_filepath)
+
+  // ── タスク分割判定 ──
+  split_result = call /splitter(task_id, task)
+  task_map = split_result.task_map
+
+  all_plan_filepaths = []
+  if split_result.should_split:
+    // 分割された各サブタスクを並列で計画
+    parallel for each (sub_task_id, sub_task) in task_map:
+      plan_fps = call /planner(sub_task_id, sub_task, investigation_filepath)
+      all_plan_filepaths.extend(plan_fps)
+  else:
+    all_plan_filepaths = call /planner(task_id, task, investigation_filepath)
 
   // セットアップでは developer/reviewer をスキップし、
   // 計画ファイルをそのまま documenter に渡す
-  call /documenter(task_id, plan_filepath_array)
+
+  // ── ユーザ承認 ──
+  user_approval = askQuestions("ドキュメント更新を実行しますか？", all_plan_filepaths)
+  if user_approval == "ok":
+    if split_result.should_split:
+      // 分割時は各サブタスクの計画を並列で documenter に渡す
+      parallel for each (sub_task_id, _) in task_map:
+        sub_plans = filter(all_plan_filepaths, sub_task_id)
+        call /documenter(sub_task_id, sub_plans)
+    else:
+      call /documenter(task_id, all_plan_filepaths)
 ```
 
 ### 設計フロー
@@ -141,21 +164,14 @@ function run_design_flow(task_id, task):
   )
 
   if next_action == "このまま実装に進む":
-    // hearing.md を investigation.md の代替として開発フローへ接続
-    plan_filepath_array = call /planner(task_id, task, hearing_filepath)
-
-    user_approval = askQuestions("計画を確認してください", plan_filepath_array)
-    if user_approval == "ok":
-      dev_result_filepath_array = []
-      parallel for each plan_filepath in plan_filepath_array:
-        result = call /developer(task_id, plan_filepath)
-        dev_result_filepath_array.append(result)
-
-      review = call /reviewer(task_id, dev_result_filepath_array)
-      call /documenter(task_id, dev_result_filepath_array)
+    // hearing.md を既存調査結果として開発フローと同じ処理ルートへ
+    run_development_flow(task_id, task, hearing_filepath)
 
   else if next_action == "ドキュメントとして整理する":
-    call /documenter(task_id, [hearing_filepath])
+    // ── ユーザ承認 ──
+    user_approval = askQuestions("ドキュメント更新を実行しますか？", [hearing_filepath])
+    if user_approval == "ok":
+      call /documenter(task_id, [hearing_filepath])
 
   // "ヒアリング結果だけで完了" の場合は何もせず終了
 ```
@@ -163,7 +179,7 @@ function run_design_flow(task_id, task):
 ### 開発フロー
 
 ```pseudo
-function run_development_flow(task_id, task):
+function run_development_flow(task_id, task, existing_investigation_filepath = null):
   // ── スコーピング（条件付き） ──
   // タスク記述から複雑度を判定し、分割が必要そうな場合のみ splitter を呼ぶ
   // 判定基準: 複数機能にまたがる / 複数モジュール変更 / "AとBとCを..." のような列挙
@@ -177,26 +193,34 @@ function run_development_flow(task_id, task):
   all_dev_results = {}  // { sub_task_id: dev_result_filepath_array }
 
   // subtask間で依存がなければ並列、あれば逐次
+  // existing_investigation_filepath がある場合は各subtaskに引き継ぐ
   if subtasks_are_independent(task_map):
     parallel for each (sub_task_id, sub_task) in task_map:
-      results = run_subtask(sub_task_id, sub_task)
+      results = run_subtask(sub_task_id, sub_task, existing_investigation_filepath)
       all_dev_results[sub_task_id] = results
   else:
     for each (sub_task_id, sub_task) in task_map:
-      results = run_subtask(sub_task_id, sub_task)
+      results = run_subtask(sub_task_id, sub_task, existing_investigation_filepath)
       all_dev_results[sub_task_id] = results
 
   // ── ドキュメント（1回のみ） ──
   all_filepaths = flatten(all_dev_results.values())
-  call /documenter(task_id, all_filepaths)
+
+  // ── ユーザ承認 ──
+  user_approval = askQuestions("ドキュメント更新を実行しますか？", all_filepaths)
+  if user_approval == "ok":
+    call /documenter(task_id, all_filepaths)
 ```
 
 ```pseudo
-function run_subtask(task_id, task) -> dev_result_filepath_array:
+function run_subtask(task_id, task, existing_investigation_filepath = null) -> dev_result_filepath_array:
   todo.update(task_id, "in-progress")
 
-  // ── 調査 ──
-  investigation_filepath = call /investigator(task_id, task)
+  // ── 調査（既存の調査結果がなければ実行） ──
+  if existing_investigation_filepath != null:
+    investigation_filepath = existing_investigation_filepath
+  else:
+    investigation_filepath = call /investigator(task_id, task)
 
   // ── 計画〜レビューループ ──
   retry_count = 0
@@ -252,7 +276,7 @@ function run_subtask(task_id, task) -> dev_result_filepath_array:
 
 ## 呼び出し回数の分析
 
-### ハッピーパス（分割なし、plan 1件）
+### 開発フロー：ハッピーパス（分割なし、plan 1件）
 
 | フェーズ | 呼び出し | 並列度 |
 |---|---|---|
@@ -260,10 +284,11 @@ function run_subtask(task_id, task) -> dev_result_filepath_array:
 | planner | 1 | - |
 | developer | 1 | - |
 | reviewer | 1 | - |
+| ユーザ承認 | 1 | - |
 | documenter | 1 | - |
-| **合計** | **5** | |
+| **合計** | **6** | |
 
-### 分割あり（3 subtask、各 plan 2件、独立）
+### 開発フロー：分割あり（3 subtask、各 plan 2件、独立）
 
 | フェーズ | 呼び出し | 並列度 | wall-clock ラウンド |
 |---|---|---|---|
@@ -272,8 +297,33 @@ function run_subtask(task_id, task) -> dev_result_filepath_array:
 | planner ×3 | 3 | 3 | 1 |
 | developer ×6 | 6 | 6 | 1 |
 | reviewer ×3 | 3 | 3 | 1 |
+| ユーザ承認 | 1 | 1 | 1 |
 | documenter | 1 | 1 | 1 |
-| **合計** | **17** | | **6 ラウンド** |
+| **合計** | **18** | | **7 ラウンド** |
+
+### 設計フロー → 実装（分割なし、plan 1件）
+
+| フェーズ | 呼び出し | 並列度 |
+|---|---|---|
+| design-interviewer | 1 | - |
+| ユーザ承認（次のアクション） | 1 | - |
+| planner | 1 | - |
+| developer | 1 | - |
+| reviewer | 1 | - |
+| ユーザ承認（ドキュメント） | 1 | - |
+| documenter | 1 | - |
+| **合計** | **7** | |
+
+### セットアップフロー（分割あり、3 subtask）
+
+| フェーズ | 呼び出し | 並列度 | wall-clock ラウンド |
+|---|---|---|---|
+| investigator | 1 | 1 | 1 |
+| splitter | 1 | 1 | 1 |
+| planner ×3 | 3 | 3 | 1 |
+| ユーザ承認 | 1 | 1 | 1 |
+| documenter ×3 | 3 | 3 | 1 |
+| **合計** | **9** | | **5 ラウンド** |
 
 ## エラーハンドリング
 

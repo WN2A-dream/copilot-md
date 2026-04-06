@@ -7,11 +7,14 @@
 ```text
 .copilot-mcp/       # local-command MCP サーバー
 .copilot-work/      # Copilot 関連の作業ファイル
+  [task-id]/
+    plans/          # 計画ファイル
+    devs/           # 開発結果ファイル
+    review.md       # レビューファイル
 .copilot-docs/      # プロジェクトドキュメント
 .github/
   agents/           # エージェント定義ファイル
   instructions/     # コーディングガイドラインなどの指示ファイル
-  prompts/          # プロンプト定義ファイル
 .vscode/
   mcp.json          # MCP サーバー設定
 .gitignore
@@ -55,31 +58,3 @@ VS Code Copilot エージェント向けのローカルコマンド実行 MCP（
 | ファイルユーティリティ | 1 | ファイル情報取得 |
 
 詳細は `.copilot-mcp/README.md` を参照。
-
-## vscode settings.json
-
-### 共通のコマンド自動承認
-
-```json
-"chat.tools.terminal.autoApprove": {
-  "cd": true,
-  "/^git (add|commit|checkout|branch|status|show|log|diff|fetch|pull|check-ignore)(\\s|$)/": true,
-  "*": false
-}
-```
-
-### tester エージェント用のコマンド自動承認
-
-tester エージェントが使用する Java / C# 関連のテスト・ビルドコマンドを自動承認する設定。
-
-```json
-"chat.tools.terminal.autoApprove": {
-  "cd": true,
-  "/^git (add|commit|checkout|branch|status|show|log|diff|fetch|pull|check-ignore)(\\s|$)/": true,
-  "/^mvn (test|verify|compile|clean)(\\s|$)/": true,
-  "/^(gradle|\\.\\/gradlew) (test|build|clean)(\\s|$)/": true,
-  "/^java(c)?\\s/": true,
-  "/^dotnet (test|build|run|clean|restore)(\\s|$)/": true,
-  "*": false
-}
-```

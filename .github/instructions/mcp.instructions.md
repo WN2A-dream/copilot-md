@@ -1,6 +1,6 @@
 ---
 description: "MCP（local-command）ツールの使用ガイド。local-command MCPサーバー経由でgit/maven/gradle/dotnetコマンドを実行する際のルールとパラメータ仕様を定義する"
-applyTo: '.github/agents/**/*.agent.md'
+applyTo: '**/*'
 ---
 
 # local-command MCPツール利用ガイド
@@ -41,7 +41,7 @@ applyTo: '.github/agents/**/*.agent.md'
 | Maven | `local-command/maven_*` | tester |
 | Gradle | `local-command/gradle_*` | tester |
 | dotnet | `local-command/dotnet_*` | tester |
-| ファイル | `local-command/file_info` | （現在未割当） |
+| ファイル | `local-command/file_info` | splitter |
 
 ## Git ツール
 
