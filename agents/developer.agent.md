@@ -11,7 +11,6 @@ user-invocable: false
 
 ## ルール
 
-- [コーディング規約](../instructions/guidelines.instructions.md)に従う
 - 計画ファイルの実装手順に**厳密に従う**
 - 計画外の変更は行わない
 - ターミナル実行は行わない（read, edit, search のみ使用）

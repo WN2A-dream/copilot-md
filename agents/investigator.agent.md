@@ -13,7 +13,6 @@ user-invocable: false
 
 - MCPツール（`local-command/git_*`）を利用して、**ファイルサイズの確認・Git履歴の確認**を行う
 - `edit`ツールは、**`.copilot-work/` 以下の調査結果ファイル作成のみ**に使用する（コードの変更は禁止）
-- [コーディング規約](../instructions/guidelines.instructions.md)に従う
 - 関連ファイル外の調査は行わない
 - 計画の作成に十分な情報が得られたら、**調査はそこで打ち切る**
 

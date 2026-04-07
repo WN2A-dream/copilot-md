@@ -11,7 +11,6 @@ user-invocable: false
 
 ## ルール
 
-- [コーディング規約](../instructions/guidelines.instructions.md)に従う
 - 分割可能でも**コンテキストサイズを超えない**小さい変更は分割せずまとめる
 - 各計画は**並列作業可能な独立したタスク**にする
 
@@ -21,15 +20,6 @@ user-invocable: false
 function plan(task_id, task, investigation_filepath) -> PlanResult:
   // ── 調査結果の確認 ──
   investigation = read(investigation_filepath)
-
-  // ── タスク種別判定 ──
-  task_type = classify_task_type(task)
-
-  if task_type == "investigation":
-    // 調査タスクの場合: 調査結果をそのまま計画ファイルとして出力
-    plan_path = ".copilot-work/{task_id}/plans/plan1.md"
-    write(plan_path, format_investigation_plan(task, investigation))
-    return { "plan-filepath-array": [plan_path] }
 
   // ── 実装タスクの分割 ──
   subtasks = split_into_parallel_tasks(task, investigation)
@@ -49,8 +39,6 @@ function plan(task_id, task, investigation_filepath) -> PlanResult:
 
 ## 計画ファイル形式
 
-### 実装タスクの場合
-
 ```md
 # 計画: [実装内容]
 
@@ -65,18 +53,4 @@ function plan(task_id, task, investigation_filepath) -> PlanResult:
 ## 完了条件
 
 - [完了とみなす条件]
-```
-
-### 調査タスクの場合
-
-```md
-# 調査結果: [調査内容]
-
-## 調査結果
-
-[調査結果の説明]
-
-## 完了条件
-
-- なし
 ```

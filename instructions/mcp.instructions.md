@@ -1,6 +1,5 @@
 ---
-description: "MCP（local-command）ツールの使用ガイド。local-command MCPサーバー経由でgit/maven/gradle/dotnetコマンドを実行する際のルールとパラメータ仕様を定義する"
-applyTo: '**/*'
+description: "MCP（local-command）ツールの使用ガイド。local-command MCPサーバー経由でgit/maven/gradle/dotnetコマンドを実行する際のルールとパラメータ仕様を定義する。investigator, tester, documenter, splitter が使用する"
 ---
 
 # local-command MCPツール利用ガイド

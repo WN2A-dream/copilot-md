@@ -2,7 +2,7 @@
 name: orchestrator
 description: "開発タスクの管理と進行を担当するエージェント。新機能の実装、バグの修正、コードのリファクタリング、ワークスペースの初期セットアップなどのタスクをサブエージェントに割り振り、完了まで管理する"
 tools: [vscode/askQuestions, agent, todo]
-agents: [splitter, interviewer, design-interviewer, investigator, planner, developer, tester, reviewer, documenter]
+agents: [splitter, interviewer, investigator, planner, developer, tester, reviewer, documenter]
 ---
 
 ## 役割
@@ -22,8 +22,7 @@ agents: [splitter, interviewer, design-interviewer, investigator, planner, devel
 | エージェント | 役割 | ツール |
 |---|---|---|
 | /splitter | タスク規模判定・分割 | read, search |
-| /interviewer | ユーザヒアリング・要件明確化（開発用） | askQuestions, read, edit, search |
-| /design-interviewer | 設計作業の詳細ヒアリング（設計用） | askQuestions, read, edit, search |
+| /interviewer | ユーザヒアリング・要件明確化（development/designモード） | askQuestions, read, edit, search |
 | /investigator | コードベース調査 | read, edit, search, local-command/git_* |
 | /planner | 実装計画作成 | read, edit, search |
 | /developer | コード実装 | read, edit, search |
@@ -42,7 +41,6 @@ orchestrator はファイルの**パスのみ**を管理し、**中身は読ま�
 |---|---|---|
 | splitter | 返り値のみ（JSON） | orchestrator |
 | interviewer | `.copilot-work/[task-id]/hearing.md` | planner / documenter |
-| design-interviewer | `.copilot-work/[task-id]/hearing.md` | planner / documenter |
 | investigator | `.copilot-work/[task-id]/investigation.md` | planner |
 | planner | `.copilot-work/[task-id]/plans/plan[n].md` | developer |
 | developer | `.copilot-work/[task-id]/devs/dev[n].md` | reviewer |
@@ -87,6 +85,8 @@ function main(task):
     run_setup_flow(task_id, task)
   else if mode == "design":
     run_design_flow(task_id, task)
+  else if mode == "investigation":
+    run_investigation_flow(task_id, task)
   else:
     run_development_flow(task_id, task, null)
 
@@ -96,7 +96,7 @@ function main(task):
 ### タスク分類
 
 ```pseudo
-function classify_task(task) -> "setup" | "design" | "development":
+function classify_task(task) -> "setup" | "design" | "investigation" | "development":
   // 以下に該当する場合は "setup"
   //   - ワークスペースの初期ドキュメント構築
   //   - プロジェクト構造の文書化
@@ -106,6 +106,11 @@ function classify_task(task) -> "setup" | "design" | "development":
   //   - ストーリー・設定・キャラクター等の創作タスク
   //   - 仕様策定・設計作業・アイデア具体化
   //   - 「〜を作りたい」「〜を考えたい」のような探索的タスク
+  // 以下に該当する場合は "investigation"
+  //   - コードベースの構造・仕組みについての質問
+  //   - 既存実装の調査・影響範囲の分析
+  //   - 技術的な疑問の解消
+  //   - 「〜はどうなっている？」「〜を調べて」のような調査タスク
   // それ以外は "development"
 ```
 
@@ -153,8 +158,8 @@ function run_setup_flow(task_id, task):
 
 ```pseudo
 function run_design_flow(task_id, task):
-  // ── ヒアリング（設計用：詳細ヒアリング） ──
-  hearing_filepath = call /design-interviewer(task_id, task)
+  // ── ヒアリング（設計モード：詳細ヒアリング） ──
+  hearing_filepath = call /interviewer(task_id, task, mode="design")
 
   // ── ヒアリング結果に基づく次のアクション ──
   // ヒアリング結果を踏まえてユーザに次のステップを確認
@@ -174,6 +179,31 @@ function run_design_flow(task_id, task):
       call /documenter(task_id, [hearing_filepath])
 
   // "ヒアリング結果だけで完了" の場合は何もせず終了
+```
+
+### 調査フロー
+
+```pseudo
+function run_investigation_flow(task_id, task):
+  // ── コードベース調査 ──
+  investigation_filepath = call /investigator(task_id, task)
+
+  // ── 調査結果に基づく次のアクション ──
+  next_action = askQuestions(
+    "調査結果をまとめました: " + investigation_filepath,
+    ["この結果をもとに実装に進む", "ドキュメントとして整理する", "調査結果だけで完了"]
+  )
+
+  if next_action == "この結果をもとに実装に進む":
+    // investigation.md を既存調査結果として開発フローへ
+    run_development_flow(task_id, task, investigation_filepath)
+
+  else if next_action == "ドキュメントとして整理する":
+    user_approval = askQuestions("ドキュメント更新を実行しますか？", [investigation_filepath])
+    if user_approval == "ok":
+      call /documenter(task_id, [investigation_filepath])
+
+  // "調査結果だけで完了" の場合は何もせず終了
 ```
 
 ### 開発フロー
@@ -273,57 +303,6 @@ function run_subtask(task_id, task, existing_investigation_filepath = null) -> d
   todo.update(task_id, "completed")
   return dev_result_filepath_array
 ```
-
-## 呼び出し回数の分析
-
-### 開発フロー：ハッピーパス（分割なし、plan 1件）
-
-| フェーズ | 呼び出し | 並列度 |
-|---|---|---|
-| investigator | 1 | - |
-| planner | 1 | - |
-| developer | 1 | - |
-| reviewer | 1 | - |
-| ユーザ承認 | 1 | - |
-| documenter | 1 | - |
-| **合計** | **6** | |
-
-### 開発フロー：分割あり（3 subtask、各 plan 2件、独立）
-
-| フェーズ | 呼び出し | 並列度 | wall-clock ラウンド |
-|---|---|---|---|
-| splitter | 1 | 1 | 1 |
-| investigator ×3 | 3 | 3 | 1 |
-| planner ×3 | 3 | 3 | 1 |
-| developer ×6 | 6 | 6 | 1 |
-| reviewer ×3 | 3 | 3 | 1 |
-| ユーザ承認 | 1 | 1 | 1 |
-| documenter | 1 | 1 | 1 |
-| **合計** | **18** | | **7 ラウンド** |
-
-### 設計フロー → 実装（分割なし、plan 1件）
-
-| フェーズ | 呼び出し | 並列度 |
-|---|---|---|
-| design-interviewer | 1 | - |
-| ユーザ承認（次のアクション） | 1 | - |
-| planner | 1 | - |
-| developer | 1 | - |
-| reviewer | 1 | - |
-| ユーザ承認（ドキュメント） | 1 | - |
-| documenter | 1 | - |
-| **合計** | **7** | |
-
-### セットアップフロー（分割あり、3 subtask）
-
-| フェーズ | 呼び出し | 並列度 | wall-clock ラウンド |
-|---|---|---|---|
-| investigator | 1 | 1 | 1 |
-| splitter | 1 | 1 | 1 |
-| planner ×3 | 3 | 3 | 1 |
-| ユーザ承認 | 1 | 1 | 1 |
-| documenter ×3 | 3 | 3 | 1 |
-| **合計** | **9** | | **5 ラウンド** |
 
 ## エラーハンドリング
 

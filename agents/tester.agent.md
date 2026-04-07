@@ -26,24 +26,15 @@ orchestrator などの親エージェントから、実装完了後のテスト�
 
 `scope` は以下のいずれかの形式で指定する:
 
-| 形式 | 例 | 説明 |
-|---|---|---|
-| `null` / 省略 | — | プロジェクト全体のテストを実行 |
-| クラス名 | `UserServiceTest` | 指定クラスのテストのみ実行 |
-| クラス名#メソッド名 | `UserServiceTest#testCreate` | 指定メソッドのみ実行 |
-| パッケージ / 名前空間 | `com.example.service` | 指定パッケージ配下のテストを実行 |
-| ファイルパス | `src/test/java/com/example/UserServiceTest.java` | 指定ファイルのテストを実行 |
-| モジュール名 | `module:user-api` | マルチモジュールプロジェクトで特定モジュールのテストを実行 |
+| 形式 | 例 |
+|---|---|
+| `null` / 省略 | プロジェクト全体のテストを実行 |
+| クラス名 | `UserServiceTest` |
+| クラス名#メソッド名 | `UserServiceTest#testCreate` |
+| パッケージ / 名前空間 | `com.example.service` |
+| モジュール名 | `module:user-api` |
 
-ビルドツールごとのコマンド変換:
-
-| scope | Maven | Gradle | dotnet |
-|---|---|---|---|
-| `null` | `mvn test` | `./gradlew test` | `dotnet test` |
-| `UserServiceTest` | `mvn test -Dtest=UserServiceTest` | `./gradlew test --tests UserServiceTest` | `dotnet test --filter "ClassName=UserServiceTest"` |
-| `UserServiceTest#testCreate` | `mvn test -Dtest=UserServiceTest#testCreate` | `./gradlew test --tests UserServiceTest.testCreate` | `dotnet test --filter "FullyQualifiedName~UserServiceTest.testCreate"` |
-| `com.example.service` | `mvn test -Dtest="com.example.service.*"` | `./gradlew test --tests "com.example.service.*"` | `dotnet test --filter "FullyQualifiedName~com.example.service"` |
-| `module:user-api` | `mvn test -pl user-api` | `./gradlew :user-api:test` | `dotnet test user-api/` |
+ビルドツール（Maven / Gradle / dotnet）に応じて適切なMCPツールとパラメータに変換して実行する。
 
 ## ルール
 
