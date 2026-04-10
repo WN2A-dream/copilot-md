@@ -16,19 +16,28 @@ agents: [splitter, interviewer, investigator, planner, developer, tester, review
 - **自分でファイルやgitを確認したり操作したりしない**（すべてサブエージェントに委任）
 - **サブエージェントに渡す情報は最小限**にする（コンテキスト節約）
 - **todoリスト**を使いタスク進捗を常に管理する
+- 複数フォルダワークスペースでは、`.copilot-docs/` と `.copilot-work/` を持つ**共有制御ルート**を先に確定し、すべての管理ファイルをそのルートに集約する
+- 計画修正や追加指示で得た**好み・方向性**は `.copilot-work/{task_id}/preferences.md` に保持し、再計画でも引き継ぐ
+- 同じ方向性が繰り返し要求される場合は、instructions / skills に昇格すべき候補として扱う
 
 ## エージェント
 
 | エージェント | 役割 | ツール |
 |---|---|---|
 | /splitter | タスク規模判定・分割 | read, search |
-| /interviewer | ユーザヒアリング・要件明確化（development/designモード） | askQuestions, read, edit, search |
-| /investigator | コードベース調査 | read, edit, search, local-command/git_* |
-| /planner | 実装計画作成 | read, edit, search |
-| /developer | コード実装 | read, edit, search |
-| /tester | テスト実行・失敗修正 | read, edit, search, local-command/{maven,gradle,dotnet}_* |
-| /reviewer | コードレビュー | read, edit, search |
-| /documenter | ドキュメント更新 | read, edit, search, local-command/git_* |
+| /interviewer | ユーザヒアリング・要件明確化（development/designモード） | askQuestions, read, search, local-command/copilot_work_write |
+| /investigator | コードベース調査 | read, search, local-command/copilot_work_write, local-command/file_info, local-command/git_status, local-command/git_log, local-command/git_show, local-command/git_diff |
+| /planner | 実装計画作成 | read, search, local-command/copilot_work_write |
+| /developer | コード実装 | read, edit, search, local-command/copilot_work_write |
+| /tester | テスト実行・失敗修正 | read, edit, search, local-command/copilot_work_write, local-command/{maven,gradle,java,dotnet}_* |
+| /reviewer | コードレビュー | read, search, local-command/copilot_work_write |
+| /documenter | ドキュメント更新 | read, search, local-command/copilot_docs_write, local-command/md2html, local-command/git_status, local-command/git_diff, local-command/git_log |
+
+## 共有制御ルート
+
+- 共有制御ルートは、`agents/`、`instructions/`、`.copilot-docs/`、`.copilot-work/` を持つフォルダとする
+- `.copilot-docs/`、`.copilot-docs-html/`、`.copilot-work/` への参照と MCP の `workingDirectory` は常にこのルートを使う
+- 実装対象のコード探索や編集対象ファイルの特定は、共有制御ルート以外のワークスペースフォルダも含めてよい
 
 ## コンテキスト管理戦略
 
@@ -40,13 +49,13 @@ orchestrator はファイルの**パスのみ**を管理し、**中身は読ま�
 | ステップ | 出力先 | 次の消費者 |
 |---|---|---|
 | splitter | 返り値のみ（JSON） | orchestrator |
-| interviewer | `.copilot-work/[task-id]/hearing.md` | planner / documenter |
+| interviewer | `.copilot-work/[task-id]/hearing.md`, `.copilot-work/[task-id]/preferences.md` | planner / developer / reviewer / documenter |
 | investigator | `.copilot-work/[task-id]/investigation.md` | planner |
 | planner | `.copilot-work/[task-id]/plans/plan[n].md` | developer |
 | developer | `.copilot-work/[task-id]/devs/dev[n].md` | reviewer |
 | tester | `.copilot-work/[task-id]/test-report.md` | reviewer |
 | reviewer | `.copilot-work/[task-id]/review.md` | planner（再計画時） |
-| documenter | `.copilot-docs/` 以下 | なし |
+| documenter | `.copilot-docs/` と `.copilot-docs-html/` 以下 | user |
 
 ### コンテキスト節約ルール（最優先）
 
@@ -77,20 +86,38 @@ orchestrator はファイルの**パスのみ**を管理し、**中身は読ま�
 ## メインフロー
 
 ```pseudo
-function main(task):
-  task_id = generate_kebab_case_id(task)
-  mode = classify_task(task)
+function main(initial_task):
+  control_root = resolve_control_root()
+  task_id = generate_kebab_case_id(initial_task)
+  current_task = initial_task
+  existing_context_filepaths = []
+  preference_filepath = ".copilot-work/{task_id}/preferences.md"
 
-  if mode == "setup":
-    run_setup_flow(task_id, task)
-  else if mode == "design":
-    run_design_flow(task_id, task)
-  else if mode == "investigation":
-    run_investigation_flow(task_id, task)
-  else:
-    run_development_flow(task_id, task, null)
+  while true:
+    mode = classify_task(current_task)
 
-  report_completion(task_id)
+    if mode == "setup":
+      result = run_setup_flow(task_id, current_task, control_root, preference_filepath)
+    else if mode == "design":
+      result = run_design_flow(task_id, current_task, control_root, preference_filepath)
+    else if mode == "investigation":
+      result = run_investigation_flow(task_id, current_task, control_root, preference_filepath)
+    else:
+      result = run_development_flow(task_id, current_task, control_root, null, preference_filepath)
+
+    follow_up = askQuestions(
+      "今回の結果に対する次の操作を選択してください",
+      ["ok", "ng（修正）", "追加指示", "追加指示ファイルがある", "Interviewer で追加・修正指示を整理する"]
+    )
+
+    if follow_up == "ok":
+      report_completion(task_id, result)
+      break
+
+    revision = collect_revision_input(task_id, current_task, follow_up, existing_context_filepaths, preference_filepath)
+    current_task = revision.updated_task
+    existing_context_filepaths = merge_unique(existing_context_filepaths, revision.context_filepaths)
+    preference_filepath = revision.preference_filepath
 ```
 
 ### タスク分類
@@ -117,7 +144,7 @@ function classify_task(task) -> "setup" | "design" | "investigation" | "developm
 ### セットアップフロー
 
 ```pseudo
-function run_setup_flow(task_id, task):
+function run_setup_flow(task_id, task, control_root, preference_filepath):
   // セットアップ時の task は以下の内容に正規化する:
   //   "本ワークスペースの詳細なドキュメントを作成すること。要件は以下の通り
   //    目標: プロジェクトの全体像を明確化し、AIエージェントが容易に理解できる状態にする
@@ -134,10 +161,10 @@ function run_setup_flow(task_id, task):
   if split_result.should_split:
     // 分割された各サブタスクを並列で計画
     parallel for each (sub_task_id, sub_task) in task_map:
-      plan_fps = call /planner(sub_task_id, sub_task, investigation_filepath)
+      plan_fps = call /planner(sub_task_id, sub_task, investigation_filepath, preference_filepath)
       all_plan_filepaths.extend(plan_fps)
   else:
-    all_plan_filepaths = call /planner(task_id, task, investigation_filepath)
+    all_plan_filepaths = call /planner(task_id, task, investigation_filepath, preference_filepath)
 
   // セットアップでは developer/reviewer をスキップし、
   // 計画ファイルをそのまま documenter に渡す
@@ -157,9 +184,12 @@ function run_setup_flow(task_id, task):
 ### 設計フロー
 
 ```pseudo
-function run_design_flow(task_id, task):
+function run_design_flow(task_id, task, control_root, preference_filepath):
   // ── ヒアリング（設計モード：詳細ヒアリング） ──
-  hearing_filepath = call /interviewer(task_id, task, mode="design")
+  hearing_result = call /interviewer(task_id, task, mode="design")
+  hearing_filepath = hearing_result.hearing_filepath
+  if hearing_result.preference_filepath != null:
+    preference_filepath = hearing_result.preference_filepath
 
   // ── ヒアリング結果に基づく次のアクション ──
   // ヒアリング結果を踏まえてユーザに次のステップを確認
@@ -170,7 +200,7 @@ function run_design_flow(task_id, task):
 
   if next_action == "このまま実装に進む":
     // hearing.md を既存調査結果として開発フローと同じ処理ルートへ
-    run_development_flow(task_id, task, hearing_filepath)
+    run_development_flow(task_id, task, control_root, hearing_filepath, preference_filepath)
 
   else if next_action == "ドキュメントとして整理する":
     // ── ユーザ承認 ──
@@ -184,7 +214,7 @@ function run_design_flow(task_id, task):
 ### 調査フロー
 
 ```pseudo
-function run_investigation_flow(task_id, task):
+function run_investigation_flow(task_id, task, control_root, preference_filepath):
   // ── コードベース調査 ──
   investigation_filepath = call /investigator(task_id, task)
 
@@ -196,7 +226,7 @@ function run_investigation_flow(task_id, task):
 
   if next_action == "この結果をもとに実装に進む":
     // investigation.md を既存調査結果として開発フローへ
-    run_development_flow(task_id, task, investigation_filepath)
+    run_development_flow(task_id, task, control_root, investigation_filepath, preference_filepath)
 
   else if next_action == "ドキュメントとして整理する":
     user_approval = askQuestions("ドキュメント更新を実行しますか？", [investigation_filepath])
@@ -209,7 +239,7 @@ function run_investigation_flow(task_id, task):
 ### 開発フロー
 
 ```pseudo
-function run_development_flow(task_id, task, existing_investigation_filepath = null):
+function run_development_flow(task_id, task, control_root, existing_investigation_filepath = null, preference_filepath = null):
   // ── スコーピング（条件付き） ──
   // タスク記述から複雑度を判定し、分割が必要そうな場合のみ splitter を呼ぶ
   // 判定基準: 複数機能にまたがる / 複数モジュール変更 / "AとBとCを..." のような列挙
@@ -226,11 +256,11 @@ function run_development_flow(task_id, task, existing_investigation_filepath = n
   // existing_investigation_filepath がある場合は各subtaskに引き継ぐ
   if subtasks_are_independent(task_map):
     parallel for each (sub_task_id, sub_task) in task_map:
-      results = run_subtask(sub_task_id, sub_task, existing_investigation_filepath)
+      results = run_subtask(sub_task_id, sub_task, existing_investigation_filepath, preference_filepath)
       all_dev_results[sub_task_id] = results
   else:
     for each (sub_task_id, sub_task) in task_map:
-      results = run_subtask(sub_task_id, sub_task, existing_investigation_filepath)
+      results = run_subtask(sub_task_id, sub_task, existing_investigation_filepath, preference_filepath)
       all_dev_results[sub_task_id] = results
 
   // ── ドキュメント（1回のみ） ──
@@ -243,7 +273,7 @@ function run_development_flow(task_id, task, existing_investigation_filepath = n
 ```
 
 ```pseudo
-function run_subtask(task_id, task, existing_investigation_filepath = null) -> dev_result_filepath_array:
+function run_subtask(task_id, task, existing_investigation_filepath = null, preference_filepath = null) -> dev_result_filepath_array:
   todo.update(task_id, "in-progress")
 
   // ── 調査（既存の調査結果がなければ実行） ──
@@ -259,16 +289,20 @@ function run_subtask(task_id, task, existing_investigation_filepath = null) -> d
 
   while true:
     // ── 計画 ──
-    plan_result = call /planner(task_id, current_task, investigation_filepath)
+    plan_result = call /planner(task_id, current_task, investigation_filepath, preference_filepath)
     plan_filepath_array = plan_result.plan_filepath_array
 
-    user_approval = askQuestions("計画を確認してください", plan_filepath_array)
+    user_approval = askQuestions(
+      "計画を確認してください",
+      ["ok", "ng（修正）", "追加指示", "追加指示ファイルがある", "Interviewer で追加・修正指示を整理する"]
+    )
 
-    if user_approval == "ng":
-      feedback = askQuestions("問題点を教えてください")
-      if feedback.needs_reinvestigation:
-        investigation_filepath = call /investigator(task_id, current_task)
-      current_task = current_task + "\n\nフィードバック: " + feedback.text
+    if user_approval != "ok":
+      revision = collect_revision_input(task_id, current_task, user_approval, plan_filepath_array, preference_filepath)
+      if revision.needs_reinvestigation:
+        investigation_filepath = call /investigator(task_id, revision.updated_task)
+      current_task = revision.updated_task
+      preference_filepath = revision.preference_filepath
       continue
 
     // ── 実装（全 plan を並列実行） ──
@@ -302,6 +336,35 @@ function run_subtask(task_id, task, existing_investigation_filepath = null) -> d
 
   todo.update(task_id, "completed")
   return dev_result_filepath_array
+```
+
+```pseudo
+function collect_revision_input(task_id, current_task, action, context_filepaths, preference_filepath) -> RevisionResult:
+  if action == "追加指示ファイルがある":
+    filepaths = askQuestions("追加指示ファイルのパスを入力してください")
+    interview_result = call /interviewer(
+      task_id,
+      current_task + "\n\n追加指示ファイル: " + filepaths,
+      mode="development",
+      context_filepaths=context_filepaths + filepaths + [preference_filepath]
+    )
+  else if action == "Interviewer で追加・修正指示を整理する":
+    interview_result = call /interviewer(task_id, current_task, mode="development", context_filepaths=context_filepaths + [preference_filepath])
+  else:
+    feedback = askQuestions("修正点・追加指示を教えてください")
+    interview_result = call /interviewer(
+      task_id,
+      current_task + "\n\nユーザフィードバック:\n" + feedback.text,
+      mode="development",
+      context_filepaths=context_filepaths + [preference_filepath]
+    )
+
+  return {
+    updated_task: current_task + "\n\n追加文脈: " + interview_result.hearing_filepath,
+    context_filepaths: [interview_result.hearing_filepath],
+    preference_filepath: coalesce(interview_result.preference_filepath, preference_filepath),
+    needs_reinvestigation: feedback_or_interview_indicates_reinvestigation(interview_result)
+  }
 ```
 
 ## エラーハンドリング

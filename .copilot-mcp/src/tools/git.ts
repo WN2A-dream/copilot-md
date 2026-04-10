@@ -9,16 +9,6 @@ const gitStatusSchema = z.object({
   workingDirectory: workingDirectorySchema,
 });
 
-const gitAddSchema = z.object({
-  workingDirectory: workingDirectorySchema,
-  files: z.array(z.string()).describe("追加するファイルパスの配列"),
-});
-
-const gitCommitSchema = z.object({
-  workingDirectory: workingDirectorySchema,
-  message: z.string().describe("コミットメッセージ"),
-});
-
 const gitCheckoutSchema = z.object({
   workingDirectory: workingDirectorySchema,
   target: z.string().describe("チェックアウト対象（ブランチ名、タグ、コミットハッシュ等）"),
@@ -73,26 +63,6 @@ export const gitTools = [
     handler: async (args: unknown, config: Config) => {
       const { workingDirectory } = gitStatusSchema.parse(args);
       const result = await executeCommand("git", ["status"], workingDirectory, config.timeout, config.maxOutputSize);
-      return formatResult(result);
-    },
-  },
-  {
-    name: "git_add",
-    description: "ファイルをステージングエリアに追加する",
-    inputSchema: gitAddSchema,
-    handler: async (args: unknown, config: Config) => {
-      const { workingDirectory, files } = gitAddSchema.parse(args);
-      const result = await executeCommand("git", ["add", "--", ...files], workingDirectory, config.timeout, config.maxOutputSize);
-      return formatResult(result);
-    },
-  },
-  {
-    name: "git_commit",
-    description: "ステージング済みの変更をコミットする",
-    inputSchema: gitCommitSchema,
-    handler: async (args: unknown, config: Config) => {
-      const { workingDirectory, message } = gitCommitSchema.parse(args);
-      const result = await executeCommand("git", ["commit", "-m", message], workingDirectory, config.timeout, config.maxOutputSize);
       return formatResult(result);
     },
   },

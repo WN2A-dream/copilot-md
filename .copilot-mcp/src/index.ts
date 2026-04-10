@@ -12,6 +12,9 @@ import { mavenTools } from "./tools/maven.js";
 import { gradleTools } from "./tools/gradle.js";
 import { dotnetTools } from "./tools/dotnet.js";
 import { fileTools } from "./tools/file.js";
+import { javaTools } from "./tools/java.js";
+import { md2htmlTools } from "./tools/md2html.js";
+import { workspaceTools } from "./tools/workspace.js";
 import type { z } from "zod";
 
 interface ToolDefinition {
@@ -29,7 +32,10 @@ const allTools: ToolDefinition[] = [
   ...mavenTools,
   ...gradleTools,
   ...dotnetTools,
+  ...javaTools,
   ...fileTools,
+  ...md2htmlTools,
+  ...workspaceTools,
 ];
 
 const toolMap = new Map<string, ToolDefinition>();

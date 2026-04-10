@@ -42,26 +42,6 @@ describe("gitTools", () => {
     });
   });
 
-  describe("git_add", () => {
-    it("-- セパレータ付きでファイルを追加する", async () => {
-      const tool = findTool("git_add");
-      await tool.handler({ workingDirectory: "/test", files: ["a.ts", "b.ts"] }, mockConfig);
-      expect(mockExecuteCommand).toHaveBeenCalledWith(
-        "git", ["add", "--", "a.ts", "b.ts"], "/test", 5000, 10000,
-      );
-    });
-  });
-
-  describe("git_commit", () => {
-    it("-m でメッセージ付きコミットする", async () => {
-      const tool = findTool("git_commit");
-      await tool.handler({ workingDirectory: "/test", message: "fix bug" }, mockConfig);
-      expect(mockExecuteCommand).toHaveBeenCalledWith(
-        "git", ["commit", "-m", "fix bug"], "/test", 5000, 10000,
-      );
-    });
-  });
-
   describe("git_checkout", () => {
     it("ブランチをチェックアウトする", async () => {
       const tool = findTool("git_checkout");

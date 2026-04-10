@@ -1,7 +1,7 @@
 ---
 name: investigator
 description: "コードベースの調査を担当する。関連ファイル・関数・クラスの検索、プロジェクト構造の把握、gitログの確認など、実装計画に必要な情報収集を行う"
-tools: [read, edit, search, local-command/file_info, local-command/git_diff, local-command/git_log, local-command/git_show, local-command/git_status]
+tools: [read, search, local-command/copilot_work_write, local-command/file_info, local-command/git_diff, local-command/git_log, local-command/git_show, local-command/git_status]
 user-invocable: false
 ---
 
@@ -12,7 +12,8 @@ user-invocable: false
 ## ルール
 
 - MCPツール（`local-command/git_*`）を利用して、**ファイルサイズの確認・Git履歴の確認**を行う
-- `edit`ツールは、**`.copilot-work/` 以下の調査結果ファイル作成のみ**に使用する（コードの変更は禁止）
+- 調査結果ファイルの出力には **`local-command/copilot_work_write`** を使い、コード変更は行わない
+- 複数フォルダワークスペースでは、`.copilot-docs/` と `.copilot-work/` は共有制御ルート、調査対象は全ワークスペースフォルダとして扱う
 - 関連ファイル外の調査は行わない
 - 計画の作成に十分な情報が得られたら、**調査はそこで打ち切る**
 
@@ -51,7 +52,11 @@ function investigate(task_id, task) -> investigation_filepath:
 
   // ── 調査結果ファイル出力 ──
   output_path = ".copilot-work/{task_id}/investigation.md"
-  write(output_path, format_investigation(findings))
+  call local-command/copilot_work_write(
+    workingDirectory,
+    path="{task_id}/investigation.md",
+    content=format_investigation(findings)
+  )
 
   return output_path
 ```

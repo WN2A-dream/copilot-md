@@ -1,7 +1,7 @@
 ---
 name: interviewer
 description: "タスクの詳細が曖昧なときにユーザへヒアリングを行い、要件を明確化する。設計作業・創作タスク・仕様策定などでorchestratorから呼び出されるリーフエージェント"
-tools: [vscode/askQuestions, read, edit, search]
+tools: [vscode/askQuestions, read, search, local-command/copilot_work_write]
 user-invocable: false
 ---
 
@@ -18,6 +18,9 @@ user-invocable: false
 - **ラウンド数に上限は設けない**。情報が十分に集まるまで質問を続ける
 - 十分かどうかの判断基準は `sufficiency_check` に従う
 - 得られた情報は **hearing.md** にまとめて出力する
+- 追加指示・計画修正・UI の嗜好など、以後の再計画でも保持すべき内容は **preferences.md** に抽出する
+- hearing.md / preferences.md の更新には **`local-command/copilot_work_write`** を使う
+- 将来的に instructions / skills へ昇格すべき反復ルールが見つかった場合は、preferences.md に**反映候補**として明記する
 - **自分で実装やコード変更を行わない**（ヒアリングと整理のみ）
 
 ### モード別ルール
@@ -52,8 +55,8 @@ user-invocable: false
 ## メインフロー
 
 ```pseudo
-function interview(task_id, task, mode = "development") -> hearing_filepath:
-  context = { task: task, mode: mode, rounds: [] }
+function interview(task_id, task, mode = "development", context_filepaths = []) -> { hearing_filepath, preference_filepath? }:
+  context = { task: task, mode: mode, rounds: [], context_files: context_filepaths, stable_preferences: [] }
   round_num = 0
 
   // ── ラウンド1: 全体像の把握 ──
@@ -76,12 +79,23 @@ function interview(task_id, task, mode = "development") -> hearing_filepath:
   )
   context = accumulate(context, final_round)
 
-  // ── ヒアリング結果の出力 ──
+  // ── ヒアリング結果と好みの方向性を出力 ──
   hearing = format_hearing(context, mode)
   hearing_filepath = ".copilot-work/{task_id}/hearing.md"
-  write(hearing_filepath, hearing)
+  call local-command/copilot_work_write(workingDirectory, path="{task_id}/hearing.md", content=hearing)
 
-  return hearing_filepath
+  preference_profile = extract_stable_preferences(context)
+  if preference_profile.is_empty():
+    return { hearing_filepath }
+
+  preference_filepath = ".copilot-work/{task_id}/preferences.md"
+  call local-command/copilot_work_write(
+    workingDirectory,
+    path="{task_id}/preferences.md",
+    content=format_preferences(preference_profile)
+  )
+
+  return { hearing_filepath, preference_filepath }
 ```
 
 ```pseudo
@@ -184,6 +198,10 @@ function derive_next_questions(context, mode, round_num) -> questions:
 
 - [ヒアリング中に得られた追加情報]
 
+## 好み・方向性
+
+- [UI / 実装 / 進め方に関する継続的な嗜好]
+
 ## 仮定事項
 
 - [ヒアリングで確認できなかったが仮定した事項]
@@ -251,4 +269,26 @@ function derive_next_questions(context, mode, round_num) -> questions:
 ## 将来の拡張可能性
 
 - [将来検討する可能性のある項目]
+
+## 好み・方向性
+
+- [継続的に維持したい設計・UI の方向性]
+```
+
+### preferences.md
+
+```md
+# 好み・方向性
+
+## 固定したい方針
+
+- [次回以降の計画にも必ず反映する方針]
+
+## UI / UX の要望
+
+- [配色、密度、余白、動きなどの嗜好]
+
+## instructions / skills 反映候補
+
+- [繰り返し現れるため、永続化を検討すべきルール]
 ```

@@ -1,0 +1,69 @@
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+import type { Config } from "../config.js";
+import { md2htmlTools } from "./md2html.js";
+
+const mockConfig: Config = { timeout: 5000, maxOutputSize: 10000 };
+
+function findTool() {
+  const tool = md2htmlTools.find((entry) => entry.name === "md2html");
+  if (!tool) {
+    throw new Error("Tool md2html not found");
+  }
+  return tool;
+}
+
+describe("md2htmlTools", () => {
+  it("Markdown ファイルを検索 UI 付き HTML に変換する", async () => {
+    const tmpDir = join(tmpdir(), `mcp-test-md2html-${Date.now()}`);
+    mkdirSync(tmpDir, { recursive: true });
+    writeFileSync(join(tmpDir, "guide.md"), "# ガイド\n\n本文です。\n", "utf-8");
+
+    const tool = findTool();
+    const result = await tool.handler({ workingDirectory: tmpDir, sourcePath: "guide.md" }, mockConfig);
+
+    expect(result.isError).toBeUndefined();
+    const html = readFileSync(join(tmpDir, "guide.html"), "utf-8");
+    expect(html).toContain("page-search");
+    expect(html).toContain("<h1>ガイド</h1>");
+
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("ディレクトリ配下の Markdown をまとめて変換し index.html を生成する", async () => {
+    const tmpDir = join(tmpdir(), `mcp-test-md2html-${Date.now()}`);
+    const docsDir = join(tmpDir, ".copilot-docs");
+    mkdirSync(join(docsDir, "nested"), { recursive: true });
+    writeFileSync(join(docsDir, "index.md"), "# 目次\n", "utf-8");
+    writeFileSync(join(docsDir, "nested", "ui.md"), "# UI ガイド\n\n統一ルール\n", "utf-8");
+
+    const tool = findTool();
+    const result = await tool.handler({ workingDirectory: tmpDir, sourcePath: ".copilot-docs" }, mockConfig);
+
+    expect(result.isError).toBeUndefined();
+    expect(readFileSync(join(tmpDir, ".copilot-docs-html", "index.html"), "utf-8")).toContain("HTML 化された Markdown 資料");
+    expect(readFileSync(join(tmpDir, ".copilot-docs-html", "nested", "ui.html"), "utf-8")).toContain("UI ガイド");
+
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("ワークスペース外への出力を拒否する", async () => {
+    const tmpDir = join(tmpdir(), `mcp-test-md2html-${Date.now()}`);
+    mkdirSync(tmpDir, { recursive: true });
+    writeFileSync(join(tmpDir, "guide.md"), "# Guide\n", "utf-8");
+
+    const tool = findTool();
+    const result = await tool.handler({
+      workingDirectory: tmpDir,
+      sourcePath: "guide.md",
+      outputPath: "../escape.html",
+    }, mockConfig);
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain("ワーキングディレクトリ内");
+
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+});
