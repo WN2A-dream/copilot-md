@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, normalize, relative, resolve, sep } from "node:path";
 import MarkdownIt from "markdown-it";
 import { z } from "zod";
@@ -9,6 +9,21 @@ const markdown = new MarkdownIt({
   linkify: true,
   typographer: true,
 });
+
+const defaultLinkOpenRenderer = markdown.renderer.rules.link_open;
+
+markdown.renderer.rules.link_open = (tokens, idx, options, env, self) => {
+  const href = tokens[idx].attrGet("href");
+  if (href) {
+    tokens[idx].attrSet("href", rewriteMarkdownHref(href));
+  }
+
+  if (defaultLinkOpenRenderer) {
+    return defaultLinkOpenRenderer(tokens, idx, options, env, self);
+  }
+
+  return self.renderToken(tokens, idx, options);
+};
 
 const workingDirectorySchema = z.string().describe("コマンドを実行するワーキングディレクトリの絶対パス");
 
@@ -51,8 +66,42 @@ async function collectMarkdownFiles(directory: string): Promise<string[]> {
   return nested.flat().sort();
 }
 
+async function collectHtmlFiles(directory: string): Promise<string[]> {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const nested = await Promise.all(entries.map(async (entry) => {
+    const entryPath = resolve(directory, entry.name);
+    if (entry.isDirectory()) {
+      return collectHtmlFiles(entryPath);
+    }
+    if (entry.isFile() && entry.name.toLowerCase().endsWith(".html")) {
+      return [entryPath];
+    }
+    return [];
+  }));
+  return nested.flat().sort();
+}
+
 function toHtmlFileName(markdownPath: string): string {
   return markdownPath.replace(/\.md$/i, ".html");
+}
+
+function rewriteMarkdownHref(href: string): string {
+  if (href.startsWith("#") || href.startsWith("//") || /^[a-z][a-z0-9+.-]*:/i.test(href)) {
+    return href;
+  }
+
+  const hashIndex = href.indexOf("#");
+  const hash = hashIndex >= 0 ? href.slice(hashIndex) : "";
+  const pathWithQuery = hashIndex >= 0 ? href.slice(0, hashIndex) : href;
+  const queryIndex = pathWithQuery.indexOf("?");
+  const query = queryIndex >= 0 ? pathWithQuery.slice(queryIndex) : "";
+  const pathPart = queryIndex >= 0 ? pathWithQuery.slice(0, queryIndex) : pathWithQuery;
+
+  if (!pathPart.toLowerCase().endsWith(".md")) {
+    return href;
+  }
+
+  return `${toHtmlFileName(pathPart)}${query}${hash}`;
 }
 
 function escapeHtml(value: string): string {
@@ -494,7 +543,26 @@ export const md2htmlTools = [
           });
         }
 
+        let existingHtmlFiles: string[] = [];
+        try {
+          const outputStat = await stat(resolvedOutputDirectory);
+          if (outputStat.isDirectory()) {
+            existingHtmlFiles = await collectHtmlFiles(resolvedOutputDirectory);
+          }
+        } catch {
+          existingHtmlFiles = [];
+        }
+
         await mkdir(resolvedOutputDirectory, { recursive: true });
+        const expectedOutputFiles = new Set([
+          ...pages.map((page) => normalize(page.outputFile)),
+          normalize(resolve(resolvedOutputDirectory, "index.html")),
+        ]);
+
+        await Promise.all(existingHtmlFiles
+          .filter((htmlFile) => !expectedOutputFiles.has(normalize(htmlFile)))
+          .map((htmlFile) => rm(htmlFile, { force: true })));
+
         for (const page of pages) {
           await mkdir(dirname(page.outputFile), { recursive: true });
           await writeFile(page.outputFile, buildDocumentHtml(page, pages, searchEnabled), "utf-8");

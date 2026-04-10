@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -45,6 +45,39 @@ describe("md2htmlTools", () => {
     expect(result.isError).toBeUndefined();
     expect(readFileSync(join(tmpDir, ".copilot-docs-html", "index.html"), "utf-8")).toContain("HTML 化された Markdown 資料");
     expect(readFileSync(join(tmpDir, ".copilot-docs-html", "nested", "ui.html"), "utf-8")).toContain("UI ガイド");
+
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("Markdown 同士のリンクを html に変換し既存出力を再生成する", async () => {
+    const tmpDir = join(tmpdir(), `mcp-test-md2html-${Date.now()}`);
+    const docsDir = join(tmpDir, ".copilot-docs");
+    const outputDir = join(tmpDir, ".copilot-docs-html");
+    mkdirSync(join(docsDir, "nested"), { recursive: true });
+    mkdirSync(outputDir, { recursive: true });
+    writeFileSync(
+      join(docsDir, "index.md"),
+      "# 目次\n\n[UI ガイド](nested/ui.md)\n",
+      "utf-8",
+    );
+    writeFileSync(
+      join(docsDir, "nested", "ui.md"),
+      "# UI ガイド\n\n[目次](../index.md#top)\n",
+      "utf-8",
+    );
+    writeFileSync(join(outputDir, "stale.html"), "old output", "utf-8");
+
+    const tool = findTool();
+    const result = await tool.handler({
+      workingDirectory: tmpDir,
+      sourcePath: ".copilot-docs",
+      outputPath: ".copilot-docs-html",
+    }, mockConfig);
+
+    expect(result.isError).toBeUndefined();
+    expect(readFileSync(join(outputDir, "index.html"), "utf-8")).toContain('href="nested/ui.html"');
+    expect(readFileSync(join(outputDir, "nested", "ui.html"), "utf-8")).toContain('href="../index.html#top"');
+    expect(existsSync(join(outputDir, "stale.html"))).toBe(false);
 
     rmSync(tmpDir, { recursive: true, force: true });
   });
