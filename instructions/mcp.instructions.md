@@ -1,5 +1,5 @@
 ---
-description: "MCP（local-command）ツールの使用ガイド。local-command MCPサーバー経由でgit/maven/gradle/dotnetコマンドを実行する際のルールとパラメータ仕様を定義する。investigator, tester, documenter, splitter が使用する"
+description: "MCP（local-command）ツールの使用ガイド。local-command MCPサーバー経由で git・ビルド・変換・管理領域書き込みを行う際のルールとパラメータ仕様を定義する。interviewer, investigator, planner, developer, tester, reviewer, documenter, splitter が使用する"
 ---
 
 # local-command MCPツール利用ガイド
@@ -37,10 +37,13 @@ description: "MCP（local-command）ツールの使用ガイド。local-command 
 | カテゴリ | ツール名プレフィックス | 使用エージェント |
 |---|---|---|
 | Git | `local-command/git_*` | investigator, documenter |
+| 管理領域書き込み | `local-command/{copilot_docs_write,copilot_work_write}` | interviewer, investigator, planner, developer, tester, reviewer, documenter |
+| Markdown 変換 | `local-command/md2html` | documenter |
 | Maven | `local-command/maven_*` | tester |
 | Gradle | `local-command/gradle_*` | tester |
+| Java | `local-command/java_*` | tester |
 | dotnet | `local-command/dotnet_*` | tester |
-| ファイル | `local-command/file_info` | splitter |
+| ファイル | `local-command/file_info` | splitter, investigator |
 
 ## Git ツール
 
@@ -52,18 +55,31 @@ description: "MCP（local-command）ツールの使用ガイド。local-command 
 | `git_log` | コミット履歴表示 | `maxCount?`, `oneline?` |
 | `git_show` | コミット詳細表示 | `ref?` |
 | `git_diff` | 差分表示 | `target?`, `staged?` |
+| `git_check_ignore` | gitignore 判定 | `paths` |
 
-### 書き込み系（現在のエージェント構成では未使用）
+### ブランチ・リモート操作（現在のエージェント構成では未使用）
 
 | ツール | 用途 | 主要パラメータ |
 |---|---|---|
-| `git_add` | ステージング追加 | `files` |
-| `git_commit` | コミット | `message` |
 | `git_checkout` | ブランチ切替 | `target` |
 | `git_branch` | ブランチ作成/一覧 | `name?`, `list?` |
 | `git_fetch` | リモート取得 | `remote?` |
 | `git_pull` | リモート取り込み | `remote?`, `branch?` |
-| `git_check_ignore` | gitignore判定 | `paths` |
+
+## 管理領域書き込みツール
+
+### `.copilot-docs` / `.copilot-work` 専用
+
+| ツール | 用途 | 主要パラメータ |
+|---|---|---|
+| `copilot_docs_write` | `.copilot-docs/` 配下のファイル作成・上書き | `path`, `content` |
+| `copilot_work_write` | `.copilot-work/` 配下のファイル作成・上書き | `path`, `content` |
+
+## Markdown 変換ツール
+
+| ツール | 用途 | 主要パラメータ |
+|---|---|---|
+| `md2html` | Markdown ファイルまたはディレクトリを HTML 化 | `sourcePath`, `outputPath?`, `includeSearch?` |
 
 ## ビルド/テストツール（tester向け）
 
@@ -83,6 +99,13 @@ description: "MCP（local-command）ツールの使用ガイド。local-command 
 | `gradle_test` | テスト実行 | `testClass?`, `module?` |
 | `gradle_build` | ビルド | `module?` |
 | `gradle_clean` | クリーン | — |
+
+### Java（ビルドツールなし）
+
+| ツール | 用途 | 主要パラメータ |
+|---|---|---|
+| `java_compile` | `javac` によるコンパイル | `sourceDirectory?`, `files?`, `outputDirectory?`, `classpath?` |
+| `java_run` | `java` による実行 | `mainClass`, `compiledClassesDirectory?`, `classpath?`, `args?` |
 
 ### dotnet
 
@@ -109,3 +132,7 @@ description: "MCP（local-command）ツールの使用ガイド。local-command 
 - `runInTerminal` / `execute` ツールは使用禁止。すべてMCPツール経由で実行すること
 - 各エージェントは割り当てられたカテゴリのツールのみ使用すること
 - `workingDirectory` は必ず絶対パスで指定すること
+- `.copilot-docs/` と `.copilot-work/` にしか書き込まないエージェントは、汎用 `edit` ではなく `copilot_docs_write` / `copilot_work_write` を使用すること
+- documenter は `.copilot-docs/` 更新後に `md2html` を呼び出し、`.copilot-docs-html/` を再生成すること
+- Java プロジェクトに Maven / Gradle がない場合、tester は `java_compile` を最低限の検証手段として使用し、必要に応じて `java_run` を追加すること
+- 複数フォルダワークスペースでは、管理領域ツールの `workingDirectory` は共有制御ルートを指定すること
