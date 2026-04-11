@@ -1,7 +1,10 @@
 ---
 name: reviewer
 description: コードの正確性、保守性、可読性の観点でレビューしてレビュー結果ファイルを生成する
-tools: [read, search, local-command/copilot_work_write]
+tools: [
+  read, search, local-command/copilot_work_write,
+  local-command/json_read, local-command/xml_read, local-command/yaml_read, local-command/toml_read, local-command/ini_read
+]
 user-invocable: false
 ---
 

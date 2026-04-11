@@ -15,6 +15,7 @@ import { fileTools } from "./tools/file.js";
 import { javaTools } from "./tools/java.js";
 import { md2htmlTools } from "./tools/md2html.js";
 import { workspaceTools } from "./tools/workspace.js";
+import { structuredFileTools } from "./tools/structured-file.js";
 import type { z } from "zod";
 
 interface ToolDefinition {
@@ -36,6 +37,7 @@ const allTools: ToolDefinition[] = [
   ...fileTools,
   ...md2htmlTools,
   ...workspaceTools,
+  ...structuredFileTools,
 ];
 
 const toolMap = new Map<string, ToolDefinition>();

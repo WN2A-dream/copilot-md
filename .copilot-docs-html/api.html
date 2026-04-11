@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MCP ツール一覧・仕様</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f3efe6;
+        --surface: rgba(255, 252, 247, 0.92);
+        --surface-strong: #fffaf1;
+        --ink: #2d2418;
+        --muted: #6e6255;
+        --line: rgba(106, 88, 62, 0.18);
+        --accent: #915f36;
+        --accent-soft: rgba(145, 95, 54, 0.12);
+        --hit: #ffe29a;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Yu Gothic UI", "Hiragino Sans", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(205, 179, 136, 0.24), transparent 28%),
+          linear-gradient(180deg, #fcf7ef 0%, var(--bg) 100%);
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+        gap: 24px;
+        padding: 24px;
+      }
+
+      nav, main {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(92, 71, 44, 0.08);
+      }
+
+      nav {
+        padding: 20px;
+        position: sticky;
+        top: 24px;
+        align-self: start;
+      }
+
+      nav h1 {
+        margin: 0 0 8px;
+        font-size: 1.1rem;
+      }
+
+      nav p {
+        margin: 0 0 16px;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      nav ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 8px;
+      }
+
+      nav a {
+        display: block;
+        padding: 10px 12px;
+        border-radius: 12px;
+        color: inherit;
+        text-decoration: none;
+        background: transparent;
+      }
+
+      nav a[aria-current="page"] {
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-weight: 700;
+      }
+
+      main {
+        padding: 28px;
+      }
+
+      .search-panel {
+        margin-bottom: 24px;
+        padding: 16px;
+        border-radius: 16px;
+        background: var(--surface-strong);
+        border: 1px solid var(--line);
+      }
+
+      .search-panel label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 700;
+      }
+
+      .search-panel input {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        font: inherit;
+        background: white;
+      }
+
+      .search-panel p {
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      article {
+        line-height: 1.75;
+      }
+
+      article h1, article h2, article h3, article h4 {
+        line-height: 1.3;
+      }
+
+      article pre {
+        overflow-x: auto;
+        padding: 14px;
+        border-radius: 14px;
+        background: #2a2118;
+        color: #f8f1e4;
+      }
+
+      article code {
+        font-family: "Cascadia Code", Consolas, monospace;
+      }
+
+      article table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+
+      article th, article td {
+        border: 1px solid var(--line);
+        padding: 10px 12px;
+        text-align: left;
+      }
+
+      .search-hit {
+        background: linear-gradient(180deg, transparent 0%, transparent 20%, var(--hit) 20%, var(--hit) 100%);
+      }
+
+      @media (max-width: 900px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        nav {
+          position: static;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <nav>
+        <h1>資料ナビゲーション</h1>
+        <p>生成済み HTML を横断して閲覧できます。</p>
+        <ul>
+          <li><a href="agents.html">AI エージェント一覧と開発フロー</a></li>
+<li><a href="api.html" aria-current="page">MCP ツール一覧・仕様</a></li>
+<li><a href="architecture.html">アーキテクチャ概要</a></li>
+<li><a href="index.html">ドキュメント目次</a></li>
+<li><a href="operation.html">運用・操作フロー</a></li>
+<li><a href="ui-design.html">UI デザインガイド</a></li>
+        </ul>
+      </nav>
+      <main>
+        
+      <section class="search-panel" aria-label="ページ内検索">
+        <label for="page-search">ページ内検索</label>
+        <input id="page-search" type="search" placeholder="見出しや本文を検索" />
+        <p id="search-status">検索語を入力すると該当箇所を強調表示します。</p>
+      </section>
+        <article>
+          <h1>MCP ツール一覧・仕様</h1>
+<p>現在の MCP サーバーは全 39 ツールを提供し、git 調査、ビルド・検証、Markdown の HTML 化、管理領域への限定書き込み、構造化データファイルの読み書きを扱う。</p>
+<h2>この資料で分かること</h2>
+<ul>
+<li>全ツールのカテゴリと責務</li>
+<li>各ツールの主要パラメータと内部動作</li>
+</ul>
+<h2>関連資料</h2>
+<ul>
+<li><a href="architecture.html">architecture.md</a> — データフローとセキュリティモデル</li>
+<li><a href="agents.html">agents.md</a> — どのエージェントがどのツールを使うか</li>
+</ul>
+<h2>ツール一覧</h2>
+<table>
+<thead>
+<tr>
+<th>カテゴリ</th>
+<th>ツール数</th>
+<th>定義ファイル</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Git</td>
+<td>9</td>
+<td><code>.copilot-mcp/src/tools/git.ts</code></td>
+</tr>
+<tr>
+<td>管理領域書き込み</td>
+<td>2</td>
+<td><code>.copilot-mcp/src/tools/workspace.ts</code></td>
+</tr>
+<tr>
+<td>Markdown 変換</td>
+<td>1</td>
+<td><code>.copilot-mcp/src/tools/md2html.ts</code></td>
+</tr>
+<tr>
+<td>Maven</td>
+<td>4</td>
+<td><code>.copilot-mcp/src/tools/maven.ts</code></td>
+</tr>
+<tr>
+<td>Gradle</td>
+<td>3</td>
+<td><code>.copilot-mcp/src/tools/gradle.ts</code></td>
+</tr>
+<tr>
+<td>Java</td>
+<td>2</td>
+<td><code>.copilot-mcp/src/tools/java.ts</code></td>
+</tr>
+<tr>
+<td>dotnet</td>
+<td>5</td>
+<td><code>.copilot-mcp/src/tools/dotnet.ts</code></td>
+</tr>
+<tr>
+<td>ファイルユーティリティ</td>
+<td>1</td>
+<td><code>.copilot-mcp/src/tools/file.ts</code></td>
+</tr>
+<tr>
+<td>構造化ファイル</td>
+<td>12</td>
+<td><code>.copilot-mcp/src/tools/structured-file.ts</code></td>
+</tr>
+</tbody>
+</table>
+<h2>共通仕様</h2>
+<ul>
+<li>レスポンス形式: <code>{ content: [{ type: &quot;text&quot;, text: string }], isError?: boolean }</code></li>
+<li>出力内容: stdout をそのまま返却し、stderr は <code>[stderr]</code> プレフィックス付きで追記する</li>
+<li>出力なし: <code>(出力なし)</code> を返却する</li>
+<li>エラー判定: 終了コードが 0 以外、またはツール内部でバリデーションに失敗した場合に <code>isError: true</code> を返す</li>
+<li>作業ディレクトリ: 全ツール共通の必須パラメータ <code>workingDirectory</code> を使う。複数フォルダワークスペースでは共有制御ルートを指定する</li>
+</ul>
+<h2>Git ツール</h2>
+<table>
+<thead>
+<tr>
+<th>ツール</th>
+<th>目的</th>
+<th>主要パラメータ</th>
+<th>内部コマンド / 備考</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>git_status</code></td>
+<td>リポジトリ状態を取得</td>
+<td>共通パラメータのみ</td>
+<td><code>git status</code></td>
+</tr>
+<tr>
+<td><code>git_checkout</code></td>
+<td>ブランチまたはコミットに切り替える</td>
+<td><code>target</code></td>
+<td><code>git checkout &lt;target&gt;</code> / <code>-</code> で始まる target は拒否</td>
+</tr>
+<tr>
+<td><code>git_branch</code></td>
+<td>ブランチ作成または一覧表示</td>
+<td><code>name?</code>, <code>list?</code></td>
+<td><code>git branch [name]</code></td>
+</tr>
+<tr>
+<td><code>git_show</code></td>
+<td>指定リビジョンの内容を表示</td>
+<td><code>ref?</code></td>
+<td><code>git show [ref]</code></td>
+</tr>
+<tr>
+<td><code>git_log</code></td>
+<td>コミット履歴を表示</td>
+<td><code>maxCount?</code>, <code>oneline?</code></td>
+<td><code>git log [--oneline] [-n N]</code></td>
+</tr>
+<tr>
+<td><code>git_diff</code></td>
+<td>差分を表示</td>
+<td><code>target?</code>, <code>staged?</code></td>
+<td><code>git diff [--staged] [target]</code></td>
+</tr>
+<tr>
+<td><code>git_fetch</code></td>
+<td>リモートの変更を取得</td>
+<td><code>remote?</code></td>
+<td><code>git fetch [remote]</code></td>
+</tr>
+<tr>
+<td><code>git_pull</code></td>
+<td>リモートの変更を取り込む</td>
+<td><code>remote?</code>, <code>branch?</code></td>
+<td><code>git pull [remote] [branch]</code></td>
+</tr>
+<tr>
+<td><code>git_check_ignore</code></td>
+<td><code>.gitignore</code> 対象か判定</td>
+<td><code>paths</code></td>
+<td><code>git check-ignore -- &lt;paths&gt;</code> / <code>--</code> でオプション誤認を防止</td>
+</tr>
+</tbody>
+</table>
+<h2>管理領域書き込みツール</h2>
+<table>
+<thead>
+<tr>
+<th>ツール</th>
+<th>目的</th>
+<th>主要パラメータ</th>
+<th>内部動作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>copilot_docs_write</code></td>
+<td><code>.copilot-docs/</code> 配下のファイルを作成・上書き</td>
+<td><code>path</code>, <code>content</code></td>
+<td><code>writeFile</code> / <code>.copilot-docs/</code> 外のパスは拒否</td>
+</tr>
+<tr>
+<td><code>copilot_work_write</code></td>
+<td><code>.copilot-work/</code> 配下のファイルを作成・上書き</td>
+<td><code>path</code>, <code>content</code></td>
+<td><code>writeFile</code> / <code>.copilot-work/</code> 外のパスは拒否</td>
+</tr>
+</tbody>
+</table>
+<h2>Markdown 変換ツール</h2>
+<table>
+<thead>
+<tr>
+<th>ツール</th>
+<th>目的</th>
+<th>主要パラメータ</th>
+<th>内部動作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>md2html</code></td>
+<td>Markdown ファイルまたはディレクトリを検索 UI 付き HTML に変換</td>
+<td><code>sourcePath</code>, <code>outputPath?</code>, <code>includeSearch?</code></td>
+<td><code>markdown-it</code> で HTML 化し、Markdown 間リンクの <code>.md</code> を <code>.html</code> に変換しつつ、既存 HTML を上書き・不要分削除して再生成する</td>
+</tr>
+</tbody>
+</table>
+<h2>Maven ツール</h2>
+<table>
+<thead>
+<tr>
+<th>ツール</th>
+<th>目的</th>
+<th>主要パラメータ</th>
+<th>内部コマンド</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>maven_test</code></td>
+<td>Maven テストを実行</td>
+<td><code>testClass?</code>, <code>module?</code></td>
+<td><code>mvn test [-Dtest=...] [-pl ...]</code></td>
+</tr>
+<tr>
+<td><code>maven_verify</code></td>
+<td>verify フェーズを実行</td>
+<td><code>module?</code></td>
+<td><code>mvn verify [-pl ...]</code></td>
+</tr>
+<tr>
+<td><code>maven_compile</code></td>
+<td>コンパイルを実行</td>
+<td><code>module?</code></td>
+<td><code>mvn compile [-pl ...]</code></td>
+</tr>
+<tr>
+<td><code>maven_clean</code></td>
+<td>クリーンを実行</td>
+<td>共通パラメータのみ</td>
+<td><code>mvn clean</code></td>
+</tr>
+</tbody>
+</table>
+<h2>Gradle ツール</h2>
+<table>
+<thead>
+<tr>
+<th>ツール</th>
+<th>目的</th>
+<th>主要パラメータ</th>
+<th>内部コマンド</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gradle_test</code></td>
+<td>Gradle テストを実行</td>
+<td><code>testClass?</code>, <code>module?</code></td>
+<td><code>./gradlew test [--tests ...] [:module:test]</code>（Windows: <code>gradlew.bat</code>）</td>
+</tr>
+<tr>
+<td><code>gradle_build</code></td>
+<td>Gradle ビルドを実行</td>
+<td><code>module?</code></td>
+<td><code>./gradlew build [:module:build]</code>（Windows: <code>gradlew.bat</code>）</td>
+</tr>
+<tr>
+<td><code>gradle_clean</code></td>
+<td>Gradle クリーンを実行</td>
+<td>共通パラメータのみ</td>
+<td><code>./gradlew clean</code>（Windows: <code>gradlew.bat</code>）</td>
+</tr>
+</tbody>
+</table>
+<h2>Java ツール</h2>
+<table>
+<thead>
+<tr>
+<th>ツール</th>
+<th>目的</th>
+<th>主要パラメータ</th>
+<th>内部コマンド</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>java_compile</code></td>
+<td>build tool なしの Java ソースをコンパイル</td>
+<td><code>sourceDirectory?</code>, <code>files?</code>, <code>outputDirectory?</code>, <code>classpath?</code></td>
+<td><code>javac -d &lt;output&gt; [ -cp ... ] &lt;files...&gt;</code></td>
+</tr>
+<tr>
+<td><code>java_run</code></td>
+<td>build tool なしの Java クラスを実行</td>
+<td><code>mainClass</code>, <code>compiledClassesDirectory?</code>, <code>classpath?</code>, <code>args?</code></td>
+<td><code>java -cp &lt;classes[:classpath]&gt; &lt;mainClass&gt; [args...]</code></td>
+</tr>
+</tbody>
+</table>
+<h2>dotnet ツール</h2>
+<table>
+<thead>
+<tr>
+<th>ツール</th>
+<th>目的</th>
+<th>主要パラメータ</th>
+<th>内部コマンド</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dotnet_test</code></td>
+<td>dotnet テストを実行</td>
+<td><code>filter?</code>, <code>project?</code></td>
+<td><code>dotnet test [--filter ...] [project]</code></td>
+</tr>
+<tr>
+<td><code>dotnet_build</code></td>
+<td>dotnet ビルドを実行</td>
+<td><code>project?</code></td>
+<td><code>dotnet build [project]</code></td>
+</tr>
+<tr>
+<td><code>dotnet_run</code></td>
+<td>dotnet プロジェクトを実行</td>
+<td><code>project?</code></td>
+<td><code>dotnet run [--project ...]</code></td>
+</tr>
+<tr>
+<td><code>dotnet_clean</code></td>
+<td>dotnet クリーンを実行</td>
+<td><code>project?</code></td>
+<td><code>dotnet clean [project]</code></td>
+</tr>
+<tr>
+<td><code>dotnet_restore</code></td>
+<td>パッケージを復元</td>
+<td><code>project?</code></td>
+<td><code>dotnet restore [project]</code></td>
+</tr>
+</tbody>
+</table>
+<h2>ファイルユーティリティツール</h2>
+<table>
+<thead>
+<tr>
+<th>ツール</th>
+<th>目的</th>
+<th>主要パラメータ</th>
+<th>内部動作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>file_info</code></td>
+<td>ファイルのサイズと行数を取得</td>
+<td><code>path</code></td>
+<td><code>fs.stat</code> と <code>readline</code> でサイズ・行数を返し、ワークスペース外パスを拒否</td>
+</tr>
+</tbody>
+</table>
+<h2>構造化ファイルツール</h2>
+<p>構造化データファイル（JSON、YAML、XML、TOML、INI）を読み書きするツール群。全ツールで 10MB のファイルサイズ上限と、ワーキングディレクトリ外へのアクセス防止が適用される。</p>
+<h3>共通仕様</h3>
+<ul>
+<li><strong>パス検証</strong>: <code>workingDirectory</code> 配下のみアクセス可能。パストラバーサルを防止</li>
+<li><strong>ファイルサイズ上限</strong>: 10MB</li>
+<li><strong>BOM対応</strong>: UTF-8 BOM を自動で除去して読み込み</li>
+<li><strong>プロトタイプ汚染対策</strong>: <code>__proto__</code>、<code>constructor</code>、<code>prototype</code> キーへのアクセスを禁止</li>
+</ul>
+<h3>読み込みツール</h3>
+<table>
+<thead>
+<tr>
+<th>ツール</th>
+<th>目的</th>
+<th>主要パラメータ</th>
+<th>内部動作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>json_read</code></td>
+<td>JSON ファイルを読み込み</td>
+<td><code>path</code></td>
+<td><code>JSON.parse</code> でパースして JSON 形式で返却</td>
+</tr>
+<tr>
+<td><code>yaml_read</code></td>
+<td>YAML ファイルを読み込み</td>
+<td><code>path</code></td>
+<td><code>yaml</code> パッケージでパースして JSON 形式で返却</td>
+</tr>
+<tr>
+<td><code>xml_read</code></td>
+<td>XML ファイルを読み込み</td>
+<td><code>path</code></td>
+<td><code>fast-xml-parser</code> でパースして JSON 形式で返却</td>
+</tr>
+<tr>
+<td><code>toml_read</code></td>
+<td>TOML ファイルを読み込み</td>
+<td><code>path</code></td>
+<td><code>smol-toml</code> でパースして JSON 形式で返却</td>
+</tr>
+<tr>
+<td><code>ini_read</code></td>
+<td>INI ファイルを読み込み</td>
+<td><code>path</code></td>
+<td><code>ini</code> パッケージでパースして JSON 形式で返却</td>
+</tr>
+</tbody>
+</table>
+<h3>書き込みツール</h3>
+<table>
+<thead>
+<tr>
+<th>ツール</th>
+<th>目的</th>
+<th>主要パラメータ</th>
+<th>内部動作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>json_write</code></td>
+<td>JSON 形式でファイルに書き込み</td>
+<td><code>path</code>, <code>data</code>, <code>indent?</code></td>
+<td><code>JSON.stringify</code> でシリアライズして書き込み</td>
+</tr>
+<tr>
+<td><code>yaml_write</code></td>
+<td>YAML 形式でファイルに書き込み</td>
+<td><code>path</code>, <code>data</code>, <code>indent?</code></td>
+<td><code>yaml</code> パッケージでシリアライズして書き込み</td>
+</tr>
+<tr>
+<td><code>xml_write</code></td>
+<td>XML 形式でファイルに書き込み</td>
+<td><code>path</code>, <code>data</code>, <code>rootName?</code></td>
+<td><code>fast-xml-parser</code> でシリアライズして書き込み。単一ルートキーを持つオブジェクトは二重ラップを回避</td>
+</tr>
+<tr>
+<td><code>toml_write</code></td>
+<td>TOML 形式でファイルに書き込み</td>
+<td><code>path</code>, <code>data</code></td>
+<td><code>smol-toml</code> でシリアライズして書き込み</td>
+</tr>
+<tr>
+<td><code>ini_write</code></td>
+<td>INI 形式でファイルに書き込み</td>
+<td><code>path</code>, <code>data</code></td>
+<td><code>ini</code> パッケージでシリアライズして書き込み</td>
+</tr>
+</tbody>
+</table>
+<h3>パス指定操作ツール</h3>
+<table>
+<thead>
+<tr>
+<th>ツール</th>
+<th>目的</th>
+<th>主要パラメータ</th>
+<th>内部動作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>json_get</code></td>
+<td>JSON ファイル内の値を取得</td>
+<td><code>path</code>, <code>jsonPath</code></td>
+<td>簡易 JSONPath（<code>$.key.array[0]</code> 形式）で値を取得</td>
+</tr>
+<tr>
+<td><code>json_set</code></td>
+<td>JSON ファイル内の値を設定</td>
+<td><code>path</code>, <code>jsonPath</code>, <code>value</code>, <code>indent?</code></td>
+<td>簡易 JSONPath で値を設定してファイルを上書き保存</td>
+</tr>
+</tbody>
+</table>
+
+        </article>
+      </main>
+    </div>
+    
+      <script>
+        const searchInput = document.getElementById("page-search");
+        const searchStatus = document.getElementById("search-status");
+        const targets = Array.from(document.querySelectorAll("article h1, article h2, article h3, article h4, article p, article li, article pre, article td, article th"));
+
+        const clearHits = () => {
+          for (const target of targets) {
+            target.classList.remove("search-hit");
+          }
+        };
+
+        if (searchInput && searchStatus) {
+          searchInput.addEventListener("input", () => {
+            const query = searchInput.value.trim().toLowerCase();
+            clearHits();
+
+            if (!query) {
+              searchStatus.textContent = "検索語を入力すると該当箇所を強調表示します。";
+              return;
+            }
+
+            const hits = targets.filter((target) => target.textContent && target.textContent.toLowerCase().includes(query));
+            for (const hit of hits) {
+              hit.classList.add("search-hit");
+            }
+
+            if (hits.length > 0) {
+              hits[0].scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+
+            searchStatus.textContent = hits.length + " 件ヒットしました。";
+          });
+        }
+      </script>
+  </body>
+</html>

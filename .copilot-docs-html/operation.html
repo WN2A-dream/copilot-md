@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>運用・操作フロー</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f3efe6;
+        --surface: rgba(255, 252, 247, 0.92);
+        --surface-strong: #fffaf1;
+        --ink: #2d2418;
+        --muted: #6e6255;
+        --line: rgba(106, 88, 62, 0.18);
+        --accent: #915f36;
+        --accent-soft: rgba(145, 95, 54, 0.12);
+        --hit: #ffe29a;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Yu Gothic UI", "Hiragino Sans", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(205, 179, 136, 0.24), transparent 28%),
+          linear-gradient(180deg, #fcf7ef 0%, var(--bg) 100%);
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+        gap: 24px;
+        padding: 24px;
+      }
+
+      nav, main {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(92, 71, 44, 0.08);
+      }
+
+      nav {
+        padding: 20px;
+        position: sticky;
+        top: 24px;
+        align-self: start;
+      }
+
+      nav h1 {
+        margin: 0 0 8px;
+        font-size: 1.1rem;
+      }
+
+      nav p {
+        margin: 0 0 16px;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      nav ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 8px;
+      }
+
+      nav a {
+        display: block;
+        padding: 10px 12px;
+        border-radius: 12px;
+        color: inherit;
+        text-decoration: none;
+        background: transparent;
+      }
+
+      nav a[aria-current="page"] {
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-weight: 700;
+      }
+
+      main {
+        padding: 28px;
+      }
+
+      .search-panel {
+        margin-bottom: 24px;
+        padding: 16px;
+        border-radius: 16px;
+        background: var(--surface-strong);
+        border: 1px solid var(--line);
+      }
+
+      .search-panel label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 700;
+      }
+
+      .search-panel input {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        font: inherit;
+        background: white;
+      }
+
+      .search-panel p {
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      article {
+        line-height: 1.75;
+      }
+
+      article h1, article h2, article h3, article h4 {
+        line-height: 1.3;
+      }
+
+      article pre {
+        overflow-x: auto;
+        padding: 14px;
+        border-radius: 14px;
+        background: #2a2118;
+        color: #f8f1e4;
+      }
+
+      article code {
+        font-family: "Cascadia Code", Consolas, monospace;
+      }
+
+      article table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+
+      article th, article td {
+        border: 1px solid var(--line);
+        padding: 10px 12px;
+        text-align: left;
+      }
+
+      .search-hit {
+        background: linear-gradient(180deg, transparent 0%, transparent 20%, var(--hit) 20%, var(--hit) 100%);
+      }
+
+      @media (max-width: 900px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        nav {
+          position: static;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <nav>
+        <h1>資料ナビゲーション</h1>
+        <p>生成済み HTML を横断して閲覧できます。</p>
+        <ul>
+          <li><a href="agents.html">AI エージェント一覧と開発フロー</a></li>
+<li><a href="api.html">MCP ツール一覧・仕様</a></li>
+<li><a href="architecture.html">アーキテクチャ概要</a></li>
+<li><a href="index.html">ドキュメント目次</a></li>
+<li><a href="operation.html" aria-current="page">運用・操作フロー</a></li>
+<li><a href="ui-design.html">UI デザインガイド</a></li>
+        </ul>
+      </nav>
+      <main>
+        
+      <section class="search-panel" aria-label="ページ内検索">
+        <label for="page-search">ページ内検索</label>
+        <input id="page-search" type="search" placeholder="見出しや本文を検索" />
+        <p id="search-status">検索語を入力すると該当箇所を強調表示します。</p>
+      </section>
+        <article>
+          <h1>運用・操作フロー</h1>
+<p>ユーザが orchestrator を中心に開発タスクを進めるときの操作ガイド。追加指示や再計画の戻り方も含めて現在の流れを示す。</p>
+<h2>この資料で分かること</h2>
+<ul>
+<li>開発タスク依頼の手順</li>
+<li>追加指示、再計画、HTML ドキュメント生成までの流れ</li>
+</ul>
+<h2>関連資料</h2>
+<ul>
+<li><a href="agents.html">agents.md</a> — エージェントの役割と使用ツール</li>
+<li><a href="ui-design.html">ui-design.md</a> — UI 変更時の共通方針</li>
+</ul>
+<h2>前提条件</h2>
+<ul>
+<li><code>.copilot-mcp/</code> がビルド済みであること</li>
+<li>VS Code の MCP 設定が完了していること</li>
+<li>複数フォルダワークスペースでは、<code>.copilot</code> フォルダが共有制御ルートとして開かれていること</li>
+</ul>
+<h2>開発タスクの依頼</h2>
+<h3>目的</h3>
+<p>コード実装・修正を orchestrator に依頼し、必要な再計画を含めて完了まで進める。</p>
+<h3>手順</h3>
+<ol>
+<li>Copilot Chat で orchestrator を呼び出す。</li>
+<li>実装したい内容、制約、避けたいことを自然言語で伝える。</li>
+<li>orchestrator がタスク種別を判定し、必要に応じて interviewer や investigator を呼び出す。</li>
+<li>planner が plan を提示したら、<code>ok</code> か、修正指示か、追加指示か、追加指示ファイルの有無かを返す。</li>
+<li><code>ok</code> の場合、developer、tester、reviewer が順に進む。</li>
+<li>reviewer が <code>ng</code> を返した場合、orchestrator は <a href="http://preferences.md">preferences.md</a> を維持したまま planner に戻す。</li>
+<li>reviewer が <code>ok</code> を返した場合、全サブタスクの結果を集約して documenter が <code>.copilot-docs/</code> を更新し、<code>.copilot-docs-html/</code> を再生成する。</li>
+<li>最終結果に対して追加指示があれば、orchestrator が interviewer を使って整理し、最初の分類からやり直す。</li>
+</ol>
+<h3>結果</h3>
+<ul>
+<li><code>.copilot-work/[task-id]/</code> に hearing、preferences、調査、plan、開発結果、テスト結果、レビューが残る</li>
+<li><code>.copilot-docs/</code> が更新される</li>
+<li><code>.copilot-docs-html/</code> が再生成され、一覧検索とページ内検索で閲覧できる</li>
+</ul>
+<h2>追加指示の返し方</h2>
+<table>
+<thead>
+<tr>
+<th>返し方</th>
+<th>使う場面</th>
+<th>orchestrator の動作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ok</code></td>
+<td>現在の plan / 結果で進めてよい</td>
+<td>次の工程へ進む、または終了する</td>
+</tr>
+<tr>
+<td><code>ng（修正）</code></td>
+<td>現在の案に問題がある</td>
+<td>interviewer で修正意図を整理し、<a href="http://preferences.md">preferences.md</a> を更新して再計画する</td>
+</tr>
+<tr>
+<td><code>追加指示</code></td>
+<td>新しい条件を足したい</td>
+<td>追加内容を hearing と preferences に反映して最初から流し直す</td>
+</tr>
+<tr>
+<td><code>追加指示ファイルがある</code></td>
+<td>要件を別ファイルで渡したい</td>
+<td>ファイルパスを interviewer に渡して読み込ませ、以後の plan に反映する</td>
+</tr>
+<tr>
+<td><code>Interviewer で整理する</code></td>
+<td>指示を会話しながら固めたい</td>
+<td>interviewer を呼び、十分な情報が集まるまで質問を続ける</td>
+</tr>
+</tbody>
+</table>
+<h2>ファイルリンク表示</h2>
+<p>orchestrator は plan 承認の確認時などに、関連ファイルへのマークダウンリンクをチャット上に表示する。ユーザはリンクをクリックしてファイル内容を直接確認できる。</p>
+<p>表示されるリンク例:</p>
+<ul>
+<li><code>[plan1.md](.copilot-work/{task-id}/plans/plan1.md)</code></li>
+<li><code>[hearing.md](.copilot-work/{task-id}/hearing.md)</code></li>
+<li><code>[investigation.md](.copilot-work/{task-id}/investigation.md)</code></li>
+</ul>
+<h2>セットアップタスク</h2>
+<h3>目的</h3>
+<p>プロジェクトの初期ドキュメントや運用資料を整備する。</p>
+<h3>手順</h3>
+<ol>
+<li>orchestrator にセットアップ内容を依頼する。</li>
+<li>investigator が現状を調査する。</li>
+<li>planner がドキュメント更新計画を作成する。</li>
+<li>documenter が <code>.copilot-docs/</code> を更新し、<code>.copilot-docs-html/</code> を再生成する。</li>
+</ol>
+<h3>結果</h3>
+<ul>
+<li>共有制御ルート配下の <code>.copilot-docs/</code> と <code>.copilot-docs-html/</code> が最新化される</li>
+</ul>
+
+        </article>
+      </main>
+    </div>
+    
+      <script>
+        const searchInput = document.getElementById("page-search");
+        const searchStatus = document.getElementById("search-status");
+        const targets = Array.from(document.querySelectorAll("article h1, article h2, article h3, article h4, article p, article li, article pre, article td, article th"));
+
+        const clearHits = () => {
+          for (const target of targets) {
+            target.classList.remove("search-hit");
+          }
+        };
+
+        if (searchInput && searchStatus) {
+          searchInput.addEventListener("input", () => {
+            const query = searchInput.value.trim().toLowerCase();
+            clearHits();
+
+            if (!query) {
+              searchStatus.textContent = "検索語を入力すると該当箇所を強調表示します。";
+              return;
+            }
+
+            const hits = targets.filter((target) => target.textContent && target.textContent.toLowerCase().includes(query));
+            for (const hit of hits) {
+              hit.classList.add("search-hit");
+            }
+
+            if (hits.length > 0) {
+              hits[0].scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+
+            searchStatus.textContent = hits.length + " 件ヒットしました。";
+          });
+        }
+      </script>
+  </body>
+</html>

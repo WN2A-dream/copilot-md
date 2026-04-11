@@ -24,14 +24,14 @@ agents: [splitter, interviewer, investigator, planner, developer, tester, review
 
 | エージェント | 役割 | ツール |
 |---|---|---|
-| /splitter | タスク規模判定・分割 | read, search |
+| /splitter | タスク規模判定・分割 | read, search, local-command/{json,yaml}_read |
 | /interviewer | ユーザヒアリング・要件明確化（development/designモード） | askQuestions, read, search, local-command/copilot_work_write |
-| /investigator | コードベース調査 | read, search, local-command/copilot_work_write, local-command/file_info, local-command/git_status, local-command/git_log, local-command/git_show, local-command/git_diff |
-| /planner | 実装計画作成 | read, search, local-command/copilot_work_write |
-| /developer | コード実装 | read, edit, search, local-command/copilot_work_write |
-| /tester | テスト実行・失敗修正 | read, edit, search, local-command/copilot_work_write, local-command/{maven,gradle,java,dotnet}_* |
-| /reviewer | コードレビュー | read, search, local-command/copilot_work_write |
-| /documenter | ドキュメント更新 | read, search, local-command/copilot_docs_write, local-command/md2html, local-command/git_status, local-command/git_diff, local-command/git_log |
+| /investigator | コードベース調査 | read, search, local-command/copilot_work_write, local-command/file_info, local-command/git_*, local-command/{json,xml,yaml,toml,ini}_read |
+| /planner | 実装計画作成 | read, search, local-command/copilot_work_write, local-command/{json,xml,yaml,toml,ini}_read |
+| /developer | コード実装 | read, edit, search, local-command/copilot_work_write, local-command/{json,xml,yaml,toml,ini}_{read,write}, local-command/json_{get,set} |
+| /tester | テスト実行・失敗修正 | read, edit, search, local-command/copilot_work_write, local-command/{maven,gradle,java,dotnet}_*, local-command/{json,xml,yaml}_{read,write} |
+| /reviewer | コードレビュー | read, search, local-command/copilot_work_write, local-command/{json,xml,yaml,toml,ini}_read |
+| /documenter | ドキュメント更新 | read, search, local-command/copilot_docs_write, local-command/md2html, local-command/git_*, local-command/{json,yaml,toml}_read |
 
 ## 共有制御ルート
 
@@ -92,6 +92,7 @@ function main(initial_task):
   current_task = initial_task
   existing_context_filepaths = []
   preference_filepath = ".copilot-work/{task_id}/preferences.md"
+  all_result_filepaths = []  // 結果ファイルを蓄積
 
   while true:
     mode = classify_task(current_task)
@@ -105,12 +106,23 @@ function main(initial_task):
     else:
       result = run_development_flow(task_id, current_task, control_root, null, preference_filepath)
 
+    // 結果ファイルを蓄積
+    all_result_filepaths = merge_unique(all_result_filepaths, result.filepaths)
+
     follow_up = askQuestions(
       "今回の結果に対する次の操作を選択してください",
       ["ok", "ng（修正）", "追加指示", "追加指示ファイルがある", "Interviewer で追加・修正指示を整理する"]
     )
 
     if follow_up == "ok":
+      // ── ドキュメント更新（ok が出た後にまとめて実行） ──
+      if all_result_filepaths.length > 0:
+        // ファイルパスをマークダウンリンク形式で表示してユーザがクリックで参照可能にする
+        display_file_links(all_result_filepaths)  // 例: [plan1.md](.copilot-work/{task_id}/plans/plan1.md)
+        user_approval = askQuestions("ドキュメント更新を実行しますか？", all_result_filepaths)
+        if user_approval == "ok":
+          call /documenter(task_id, all_result_filepaths)
+
       report_completion(task_id, result)
       break
 
@@ -167,18 +179,8 @@ function run_setup_flow(task_id, task, control_root, preference_filepath):
     all_plan_filepaths = call /planner(task_id, task, investigation_filepath, preference_filepath)
 
   // セットアップでは developer/reviewer をスキップし、
-  // 計画ファイルをそのまま documenter に渡す
-
-  // ── ユーザ承認 ──
-  user_approval = askQuestions("ドキュメント更新を実行しますか？", all_plan_filepaths)
-  if user_approval == "ok":
-    if split_result.should_split:
-      // 分割時は各サブタスクの計画を並列で documenter に渡す
-      parallel for each (sub_task_id, _) in task_map:
-        sub_plans = filter(all_plan_filepaths, sub_task_id)
-        call /documenter(sub_task_id, sub_plans)
-    else:
-      call /documenter(task_id, all_plan_filepaths)
+  // 計画ファイルパスを返す（ドキュメント更新は main で実行）
+  return { filepaths: all_plan_filepaths }
 ```
 
 ### 設計フロー
@@ -193,6 +195,8 @@ function run_design_flow(task_id, task, control_root, preference_filepath):
 
   // ── ヒアリング結果に基づく次のアクション ──
   // ヒアリング結果を踏まえてユーザに次のステップを確認
+  // ファイルパスをマークダウンリンク形式で表示
+  display_file_links([hearing_filepath])
   next_action = askQuestions(
     "ヒアリング結果をまとめました: " + hearing_filepath,
     ["このまま実装に進む", "ドキュメントとして整理する", "ヒアリング結果だけで完了"]
@@ -200,15 +204,14 @@ function run_design_flow(task_id, task, control_root, preference_filepath):
 
   if next_action == "このまま実装に進む":
     // hearing.md を既存調査結果として開発フローと同じ処理ルートへ
-    run_development_flow(task_id, task, control_root, hearing_filepath, preference_filepath)
+    return run_development_flow(task_id, task, control_root, hearing_filepath, preference_filepath)
 
   else if next_action == "ドキュメントとして整理する":
-    // ── ユーザ承認 ──
-    user_approval = askQuestions("ドキュメント更新を実行しますか？", [hearing_filepath])
-    if user_approval == "ok":
-      call /documenter(task_id, [hearing_filepath])
+    // ファイルパスを返す（ドキュメント更新は main で実行）
+    return { filepaths: [hearing_filepath] }
 
-  // "ヒアリング結果だけで完了" の場合は何もせず終了
+  // "ヒアリング結果だけで完了" の場合
+  return { filepaths: [] }
 ```
 
 ### 調査フロー
@@ -219,6 +222,8 @@ function run_investigation_flow(task_id, task, control_root, preference_filepath
   investigation_filepath = call /investigator(task_id, task)
 
   // ── 調査結果に基づく次のアクション ──
+  // ファイルパスをマークダウンリンク形式で表示
+  display_file_links([investigation_filepath])
   next_action = askQuestions(
     "調査結果をまとめました: " + investigation_filepath,
     ["この結果をもとに実装に進む", "ドキュメントとして整理する", "調査結果だけで完了"]
@@ -226,14 +231,14 @@ function run_investigation_flow(task_id, task, control_root, preference_filepath
 
   if next_action == "この結果をもとに実装に進む":
     // investigation.md を既存調査結果として開発フローへ
-    run_development_flow(task_id, task, control_root, investigation_filepath, preference_filepath)
+    return run_development_flow(task_id, task, control_root, investigation_filepath, preference_filepath)
 
   else if next_action == "ドキュメントとして整理する":
-    user_approval = askQuestions("ドキュメント更新を実行しますか？", [investigation_filepath])
-    if user_approval == "ok":
-      call /documenter(task_id, [investigation_filepath])
+    // ファイルパスを返す（ドキュメント更新は main で実行）
+    return { filepaths: [investigation_filepath] }
 
-  // "調査結果だけで完了" の場合は何もせず終了
+  // "調査結果だけで完了" の場合
+  return { filepaths: [] }
 ```
 
 ### 開発フロー
@@ -263,13 +268,9 @@ function run_development_flow(task_id, task, control_root, existing_investigatio
       results = run_subtask(sub_task_id, sub_task, existing_investigation_filepath, preference_filepath)
       all_dev_results[sub_task_id] = results
 
-  // ── ドキュメント（1回のみ） ──
+  // ファイルパスを返す（ドキュメント更新は main で実行）
   all_filepaths = flatten(all_dev_results.values())
-
-  // ── ユーザ承認 ──
-  user_approval = askQuestions("ドキュメント更新を実行しますか？", all_filepaths)
-  if user_approval == "ok":
-    call /documenter(task_id, all_filepaths)
+  return { filepaths: all_filepaths }
 ```
 
 ```pseudo
@@ -292,6 +293,8 @@ function run_subtask(task_id, task, existing_investigation_filepath = null, pref
     plan_result = call /planner(task_id, current_task, investigation_filepath, preference_filepath)
     plan_filepath_array = plan_result.plan_filepath_array
 
+    // ファイルパスをマークダウンリンク形式で表示してユーザがクリックで参照可能にする
+    display_file_links(plan_filepath_array)  // 例: [plan1.md](.copilot-work/{task_id}/plans/plan1.md)
     user_approval = askQuestions(
       "計画を確認してください",
       ["ok", "ng（修正）", "追加指示", "追加指示ファイルがある", "Interviewer で追加・修正指示を整理する"]

@@ -1,7 +1,10 @@
 ---
 name: planner
 description: "タスクと調査結果に基づいて具体的な実装計画を作成する。orchestratorから呼び出されるリーフエージェント"
-tools: [read, search, local-command/copilot_work_write]
+tools: [
+  read, search, local-command/copilot_work_write,
+  local-command/json_read, local-command/xml_read, local-command/yaml_read, local-command/toml_read, local-command/ini_read
+]
 user-invocable: false
 ---
 

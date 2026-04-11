@@ -1,7 +1,16 @@
 ---
 name: tester
 description: "テストの実行と結果分析を担当する。テスト失敗時にはコードの修正も行う。Java (Maven/Gradle/ビルドツールなし) および C# (.NET) の検証に対応。実装完了後のテスト検証や、レビュー指摘の修正確認で呼び出す"
-tools: [read, edit, search, local-command/copilot_work_write, local-command/maven_test, local-command/maven_verify, local-command/maven_compile, local-command/maven_clean, local-command/gradle_test, local-command/gradle_build, local-command/gradle_clean, local-command/java_compile, local-command/java_run, local-command/dotnet_test, local-command/dotnet_build, local-command/dotnet_run, local-command/dotnet_clean, local-command/dotnet_restore]
+tools: [
+  read, edit, search, local-command/copilot_work_write,
+  local-command/maven_test, local-command/maven_verify, local-command/maven_compile, local-command/maven_clean,
+  local-command/gradle_test, local-command/gradle_build, local-command/gradle_clean,
+  local-command/java_compile, local-command/java_run,
+  local-command/dotnet_test, local-command/dotnet_build, local-command/dotnet_run, local-command/dotnet_clean, local-command/dotnet_restore,
+  local-command/json_read, local-command/json_write,
+  local-command/xml_read, local-command/xml_write,
+  local-command/yaml_read, local-command/yaml_write
+]
 user-invocable: false
 ---
 

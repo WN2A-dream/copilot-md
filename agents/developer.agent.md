@@ -1,7 +1,15 @@
 ---
 name: developer
 description: 計画ファイルを読んでコードを実装し開発結果ファイルを生成する
-tools: [read, edit, search, local-command/copilot_work_write]
+tools: [
+  read, edit, search, local-command/copilot_work_write,
+  local-command/json_read, local-command/json_write,
+  local-command/json_get, local-command/json_set,
+  local-command/xml_read, local-command/xml_write,
+  local-command/yaml_read, local-command/yaml_write,
+  local-command/toml_read, local-command/toml_write,
+  local-command/ini_read, local-command/ini_write
+]
 user-invocable: false
 ---
 

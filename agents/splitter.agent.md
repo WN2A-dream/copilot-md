@@ -1,7 +1,10 @@
 ---
 name: splitter
 description: "タスクの規模を見積もり、コンテキストサイズに収まるようにタスクを分割する。大きなタスクの分割、コンテキスト消費量の見積もりに使用する"
-tools: [read, search, local-command/file_info]
+tools: [
+  read, search, local-command/file_info,
+  local-command/json_read, local-command/yaml_read
+]
 user-invocable: false
 ---
 

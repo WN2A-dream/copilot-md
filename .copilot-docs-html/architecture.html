@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>アーキテクチャ概要</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f3efe6;
+        --surface: rgba(255, 252, 247, 0.92);
+        --surface-strong: #fffaf1;
+        --ink: #2d2418;
+        --muted: #6e6255;
+        --line: rgba(106, 88, 62, 0.18);
+        --accent: #915f36;
+        --accent-soft: rgba(145, 95, 54, 0.12);
+        --hit: #ffe29a;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Yu Gothic UI", "Hiragino Sans", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(205, 179, 136, 0.24), transparent 28%),
+          linear-gradient(180deg, #fcf7ef 0%, var(--bg) 100%);
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+        gap: 24px;
+        padding: 24px;
+      }
+
+      nav, main {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(92, 71, 44, 0.08);
+      }
+
+      nav {
+        padding: 20px;
+        position: sticky;
+        top: 24px;
+        align-self: start;
+      }
+
+      nav h1 {
+        margin: 0 0 8px;
+        font-size: 1.1rem;
+      }
+
+      nav p {
+        margin: 0 0 16px;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      nav ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 8px;
+      }
+
+      nav a {
+        display: block;
+        padding: 10px 12px;
+        border-radius: 12px;
+        color: inherit;
+        text-decoration: none;
+        background: transparent;
+      }
+
+      nav a[aria-current="page"] {
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-weight: 700;
+      }
+
+      main {
+        padding: 28px;
+      }
+
+      .search-panel {
+        margin-bottom: 24px;
+        padding: 16px;
+        border-radius: 16px;
+        background: var(--surface-strong);
+        border: 1px solid var(--line);
+      }
+
+      .search-panel label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 700;
+      }
+
+      .search-panel input {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        font: inherit;
+        background: white;
+      }
+
+      .search-panel p {
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      article {
+        line-height: 1.75;
+      }
+
+      article h1, article h2, article h3, article h4 {
+        line-height: 1.3;
+      }
+
+      article pre {
+        overflow-x: auto;
+        padding: 14px;
+        border-radius: 14px;
+        background: #2a2118;
+        color: #f8f1e4;
+      }
+
+      article code {
+        font-family: "Cascadia Code", Consolas, monospace;
+      }
+
+      article table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+
+      article th, article td {
+        border: 1px solid var(--line);
+        padding: 10px 12px;
+        text-align: left;
+      }
+
+      .search-hit {
+        background: linear-gradient(180deg, transparent 0%, transparent 20%, var(--hit) 20%, var(--hit) 100%);
+      }
+
+      @media (max-width: 900px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        nav {
+          position: static;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <nav>
+        <h1>資料ナビゲーション</h1>
+        <p>生成済み HTML を横断して閲覧できます。</p>
+        <ul>
+          <li><a href="agents.html">AI エージェント一覧と開発フロー</a></li>
+<li><a href="api.html">MCP ツール一覧・仕様</a></li>
+<li><a href="architecture.html" aria-current="page">アーキテクチャ概要</a></li>
+<li><a href="index.html">ドキュメント目次</a></li>
+<li><a href="operation.html">運用・操作フロー</a></li>
+<li><a href="ui-design.html">UI デザインガイド</a></li>
+        </ul>
+      </nav>
+      <main>
+        
+      <section class="search-panel" aria-label="ページ内検索">
+        <label for="page-search">ページ内検索</label>
+        <input id="page-search" type="search" placeholder="見出しや本文を検索" />
+        <p id="search-status">検索語を入力すると該当箇所を強調表示します。</p>
+      </section>
+        <article>
+          <h1>アーキテクチャ概要</h1>
+<p>local-command MCP サーバーは、シェルコマンド実行・管理領域書き込み・Markdown 変換・構造化データファイル操作を構造化パラメータで提供する。</p>
+<h2>この資料で分かること</h2>
+<ul>
+<li>システム全体像と主要モジュール</li>
+<li>ツール登録の流れと安全制約</li>
+</ul>
+<h2>関連資料</h2>
+<ul>
+<li><a href="api.html">api.md</a> — ツール一覧と仕様の詳細</li>
+<li><a href="agents.html">agents.md</a> — 各エージェントの利用ツール</li>
+</ul>
+<h2>技術スタック</h2>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>選定</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>実装言語</td>
+<td>TypeScript (Node.js)</td>
+<td>MCP SDK と型安全な実装の両立</td>
+</tr>
+<tr>
+<td>トランスポート</td>
+<td>stdio</td>
+<td>VS Code Copilot の標準構成に合う</td>
+</tr>
+<tr>
+<td>設定ファイル</td>
+<td>YAML (<code>config.yaml</code>)</td>
+<td>コメント付きで調整しやすい</td>
+</tr>
+<tr>
+<td>Markdown レンダラ</td>
+<td><code>markdown-it</code></td>
+<td>HTML 変換を安定して実装できる</td>
+</tr>
+</tbody>
+</table>
+<h2>データフロー</h2>
+<pre><code class="language-text">エージェント
+  ↓ MCP リクエスト（構造化パラメータ）
+MCP サーバー — .copilot-mcp/src/index.ts
+  ↓ toolMap でルーティング
+各ツールモジュール — .copilot-mcp/src/tools/*.ts
+  ├─ コマンド実行系 → .copilot-mcp/src/executor.ts
+  ├─ 管理領域書き込み系 → Node.js fs/promises
+  ├─ Markdown 変換系 → markdown-it + Node.js fs/promises
+  └─ 構造化ファイル操作系 → fast-xml-parser, yaml, smol-toml, ini + Node.js fs/promises
+  ↓ MCP レスポンス
+エージェント
+</code></pre>
+<h2>モジュール構成</h2>
+<table>
+<thead>
+<tr>
+<th>ファイル</th>
+<th>責務</th>
+<th>主な入力</th>
+<th>主な出力</th>
+<th>依存先</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>.copilot-mcp/src/index.ts</code></td>
+<td>ツール登録とルーティング</td>
+<td>MCP リクエスト</td>
+<td>MCP レスポンス</td>
+<td>MCP SDK, 全ツールモジュール</td>
+</tr>
+<tr>
+<td><code>.copilot-mcp/src/config.ts</code></td>
+<td>設定読み込み</td>
+<td><code>config.yaml</code></td>
+<td><code>Config</code> オブジェクト</td>
+<td>js-yaml</td>
+</tr>
+<tr>
+<td><code>.copilot-mcp/src/executor.ts</code></td>
+<td>子プロセス実行、タイムアウト、出力制御</td>
+<td>コマンド, 引数, cwd</td>
+<td><code>CommandResult</code></td>
+<td>Node.js <code>child_process</code></td>
+</tr>
+<tr>
+<td><code>.copilot-mcp/src/tools/format.ts</code></td>
+<td>実行結果を MCP 形式へ整形</td>
+<td><code>CommandResult</code></td>
+<td>MCP レスポンス</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>.copilot-mcp/src/tools/git.ts</code></td>
+<td>Git ツール 9 個</td>
+<td>構造化パラメータ</td>
+<td>git 引数</td>
+<td>executor, format</td>
+</tr>
+<tr>
+<td><code>.copilot-mcp/src/tools/maven.ts</code></td>
+<td>Maven ツール 4 個</td>
+<td>構造化パラメータ</td>
+<td>mvn 引数</td>
+<td>executor, format</td>
+</tr>
+<tr>
+<td><code>.copilot-mcp/src/tools/gradle.ts</code></td>
+<td>Gradle ツール 3 個</td>
+<td>構造化パラメータ</td>
+<td>gradlew 引数</td>
+<td>executor, format</td>
+</tr>
+<tr>
+<td><code>.copilot-mcp/src/tools/java.ts</code></td>
+<td>build tool なし Java ツール 2 個</td>
+<td>構造化パラメータ</td>
+<td>javac/java 引数</td>
+<td>executor, format, fs/promises</td>
+</tr>
+<tr>
+<td><code>.copilot-mcp/src/tools/dotnet.ts</code></td>
+<td>dotnet ツール 5 個</td>
+<td>構造化パラメータ</td>
+<td>dotnet 引数</td>
+<td>executor, format</td>
+</tr>
+<tr>
+<td><code>.copilot-mcp/src/tools/file.ts</code></td>
+<td>ファイル情報取得</td>
+<td>相対パス</td>
+<td>サイズ・行数</td>
+<td>Node.js fs</td>
+</tr>
+<tr>
+<td><code>.copilot-mcp/src/tools/workspace.ts</code></td>
+<td><code>.copilot-docs/</code> / <code>.copilot-work/</code> 限定書き込み</td>
+<td>相対パス, content</td>
+<td>書き込み結果</td>
+<td>Node.js fs/promises</td>
+</tr>
+<tr>
+<td><code>.copilot-mcp/src/tools/md2html.ts</code></td>
+<td>Markdown の HTML 化と検索 UI 生成</td>
+<td>sourcePath, outputPath</td>
+<td>HTML ファイル群</td>
+<td>markdown-it, Node.js fs/promises</td>
+</tr>
+<tr>
+<td><code>.copilot-mcp/src/tools/structured-file.ts</code></td>
+<td>構造化データファイルの読み書き 12 個</td>
+<td>構造化パラメータ</td>
+<td>パース結果または書き込み結果</td>
+<td>fast-xml-parser, yaml, smol-toml, ini, Node.js fs/promises</td>
+</tr>
+</tbody>
+</table>
+<h2>ツール登録の仕組み</h2>
+<p>各モジュールは <code>ToolDefinition[]</code> をエクスポートする。<code>.copilot-mcp/src/index.ts</code> がこれらを結合し、<code>toolMap</code> に登録する。</p>
+<ul>
+<li>コマンド実行系は <code>executor.ts</code> を経由して OS プロセスを起動する</li>
+<li>管理領域書き込み系は <code>.copilot-docs/</code> と <code>.copilot-work/</code> への相対パスだけを受け付ける</li>
+<li><code>md2html</code> は Markdown ファイルまたはディレクトリを受け取り、<code>.copilot-docs-html/</code> などの静的 HTML 出力を生成する</li>
+<li>構造化ファイル操作系は JSON、YAML、XML、TOML、INI を読み書きし、JSONPath によるピンポイント操作も提供する</li>
+</ul>
+<h2>セキュリティモデル</h2>
+<table>
+<thead>
+<tr>
+<th>脅威</th>
+<th>対策</th>
+<th>実装箇所</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>シェルインジェクション</td>
+<td><code>spawn</code> に <code>shell: false</code> を指定し、引数を配列で渡す</td>
+<td><code>src/executor.ts</code></td>
+</tr>
+<tr>
+<td>任意コマンド実行</td>
+<td>ツールごとの zod スキーマで入力を制限する</td>
+<td><code>src/tools/*.ts</code></td>
+</tr>
+<tr>
+<td>管理領域の越境書き込み</td>
+<td><code>.copilot-docs/</code> / <code>.copilot-work/</code> 配下以外への path を拒否</td>
+<td><code>src/tools/workspace.ts</code></td>
+</tr>
+<tr>
+<td>パストラバーサル</td>
+<td>ワークスペース外パスを <code>normalize</code> + <code>startsWith(... + sep)</code> で拒否</td>
+<td><code>src/tools/file.ts</code>, <code>src/tools/workspace.ts</code>, <code>src/tools/md2html.ts</code>, <code>src/tools/java.ts</code>, <code>src/tools/structured-file.ts</code></td>
+</tr>
+<tr>
+<td>オプション誤認</td>
+<td><code>git_check_ignore</code> に <code>--</code> を使い、<code>git_checkout</code> はハイフン始まり target を拒否</td>
+<td><code>src/tools/git.ts</code></td>
+</tr>
+<tr>
+<td>プロトタイプ汚染</td>
+<td><code>__proto__</code>、<code>constructor</code>、<code>prototype</code> キーへのアクセスを禁止</td>
+<td><code>src/tools/structured-file.ts</code></td>
+</tr>
+<tr>
+<td>プロセスハング</td>
+<td>タイムアウト時に SIGTERM → 3 秒後 SIGKILL</td>
+<td><code>src/executor.ts</code></td>
+</tr>
+<tr>
+<td>出力爆発</td>
+<td><code>maxOutputSize</code> 超過時に切り詰めて終了</td>
+<td><code>src/executor.ts</code></td>
+</tr>
+<tr>
+<td>大容量ファイル</td>
+<td>構造化ファイル操作に 10MB のファイルサイズ上限を設定</td>
+<td><code>src/tools/structured-file.ts</code></td>
+</tr>
+</tbody>
+</table>
+<h2>設定</h2>
+<p><code>config.yaml</code> で以下を変更できる。型が不正な場合はデフォルト値を使う。</p>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>デフォルト</th>
+<th>説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>timeout</code></td>
+<td>30000</td>
+<td>コマンドタイムアウト（ミリ秒）</td>
+</tr>
+<tr>
+<td><code>maxOutputSize</code></td>
+<td>100000</td>
+<td>出力上限（文字数）</td>
+</tr>
+</tbody>
+</table>
+
+        </article>
+      </main>
+    </div>
+    
+      <script>
+        const searchInput = document.getElementById("page-search");
+        const searchStatus = document.getElementById("search-status");
+        const targets = Array.from(document.querySelectorAll("article h1, article h2, article h3, article h4, article p, article li, article pre, article td, article th"));
+
+        const clearHits = () => {
+          for (const target of targets) {
+            target.classList.remove("search-hit");
+          }
+        };
+
+        if (searchInput && searchStatus) {
+          searchInput.addEventListener("input", () => {
+            const query = searchInput.value.trim().toLowerCase();
+            clearHits();
+
+            if (!query) {
+              searchStatus.textContent = "検索語を入力すると該当箇所を強調表示します。";
+              return;
+            }
+
+            const hits = targets.filter((target) => target.textContent && target.textContent.toLowerCase().includes(query));
+            for (const hit of hits) {
+              hit.classList.add("search-hit");
+            }
+
+            if (hits.length > 0) {
+              hits[0].scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+
+            searchStatus.textContent = hits.length + " 件ヒットしました。";
+          });
+        }
+      </script>
+  </body>
+</html>

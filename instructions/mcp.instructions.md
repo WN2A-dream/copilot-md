@@ -44,6 +44,26 @@ description: "MCP（local-command）ツールの使用ガイド。local-command 
 | Java | `local-command/java_*` | tester |
 | dotnet | `local-command/dotnet_*` | tester |
 | ファイル | `local-command/file_info` | splitter, investigator |
+| 構造化ファイル | `local-command/{json,xml,yaml,toml,ini}_*` | developer, tester, investigator, planner, reviewer, documenter, splitter |
+
+## 構造化ファイル操作ツール
+
+設定ファイルやデータファイルの構造を保持した読み書きを行う。
+
+| ツール | 説明 | 使用エージェント |
+|---|---|---|
+| `json_read` | JSONファイルを読み込みパースする | developer, tester, investigator, planner, reviewer, documenter, splitter |
+| `json_write` | オブジェクトをJSONとして書き込む | developer, tester |
+| `json_get` | JSONPathで値を取得する | developer |
+| `json_set` | JSONPathで値を設定して保存する | developer |
+| `yaml_read` | YAMLファイルを読み込みパースする | developer, tester, investigator, planner, reviewer, documenter, splitter |
+| `yaml_write` | オブジェクトをYAMLとして書き込む | developer, tester |
+| `xml_read` | XMLファイルを読み込みパースする | developer, tester, investigator, planner, reviewer |
+| `xml_write` | オブジェクトをXMLとして書き込む | developer, tester |
+| `toml_read` | TOMLファイルを読み込みパースする | developer, investigator, planner, reviewer, documenter |
+| `toml_write` | オブジェクトをTOMLとして書き込む | developer |
+| `ini_read` | INIファイルを読み込みパースする | developer, investigator, planner, reviewer |
+| `ini_write` | オブジェクトをINIとして書き込む | developer |
 
 ## Git ツール
 

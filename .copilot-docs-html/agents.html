@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI エージェント一覧と開発フロー</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f3efe6;
+        --surface: rgba(255, 252, 247, 0.92);
+        --surface-strong: #fffaf1;
+        --ink: #2d2418;
+        --muted: #6e6255;
+        --line: rgba(106, 88, 62, 0.18);
+        --accent: #915f36;
+        --accent-soft: rgba(145, 95, 54, 0.12);
+        --hit: #ffe29a;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Yu Gothic UI", "Hiragino Sans", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(205, 179, 136, 0.24), transparent 28%),
+          linear-gradient(180deg, #fcf7ef 0%, var(--bg) 100%);
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+        gap: 24px;
+        padding: 24px;
+      }
+
+      nav, main {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(92, 71, 44, 0.08);
+      }
+
+      nav {
+        padding: 20px;
+        position: sticky;
+        top: 24px;
+        align-self: start;
+      }
+
+      nav h1 {
+        margin: 0 0 8px;
+        font-size: 1.1rem;
+      }
+
+      nav p {
+        margin: 0 0 16px;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      nav ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 8px;
+      }
+
+      nav a {
+        display: block;
+        padding: 10px 12px;
+        border-radius: 12px;
+        color: inherit;
+        text-decoration: none;
+        background: transparent;
+      }
+
+      nav a[aria-current="page"] {
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-weight: 700;
+      }
+
+      main {
+        padding: 28px;
+      }
+
+      .search-panel {
+        margin-bottom: 24px;
+        padding: 16px;
+        border-radius: 16px;
+        background: var(--surface-strong);
+        border: 1px solid var(--line);
+      }
+
+      .search-panel label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 700;
+      }
+
+      .search-panel input {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        font: inherit;
+        background: white;
+      }
+
+      .search-panel p {
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      article {
+        line-height: 1.75;
+      }
+
+      article h1, article h2, article h3, article h4 {
+        line-height: 1.3;
+      }
+
+      article pre {
+        overflow-x: auto;
+        padding: 14px;
+        border-radius: 14px;
+        background: #2a2118;
+        color: #f8f1e4;
+      }
+
+      article code {
+        font-family: "Cascadia Code", Consolas, monospace;
+      }
+
+      article table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+
+      article th, article td {
+        border: 1px solid var(--line);
+        padding: 10px 12px;
+        text-align: left;
+      }
+
+      .search-hit {
+        background: linear-gradient(180deg, transparent 0%, transparent 20%, var(--hit) 20%, var(--hit) 100%);
+      }
+
+      @media (max-width: 900px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        nav {
+          position: static;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <nav>
+        <h1>資料ナビゲーション</h1>
+        <p>生成済み HTML を横断して閲覧できます。</p>
+        <ul>
+          <li><a href="agents.html" aria-current="page">AI エージェント一覧と開発フロー</a></li>
+<li><a href="api.html">MCP ツール一覧・仕様</a></li>
+<li><a href="architecture.html">アーキテクチャ概要</a></li>
+<li><a href="index.html">ドキュメント目次</a></li>
+<li><a href="operation.html">運用・操作フロー</a></li>
+<li><a href="ui-design.html">UI デザインガイド</a></li>
+        </ul>
+      </nav>
+      <main>
+        
+      <section class="search-panel" aria-label="ページ内検索">
+        <label for="page-search">ページ内検索</label>
+        <input id="page-search" type="search" placeholder="見出しや本文を検索" />
+        <p id="search-status">検索語を入力すると該当箇所を強調表示します。</p>
+      </section>
+        <article>
+          <h1>AI エージェント一覧と開発フロー</h1>
+<p><code>agents/</code> 配下の定義ファイルに対応する運用資料。共有制御ルート、権限の切り分け、再計画ループを含めて現在のフローを整理する。</p>
+<h2>この資料で分かること</h2>
+<ul>
+<li>各エージェントの責務と使用ツール</li>
+<li>共有制御ルートと管理ファイルの流れ</li>
+</ul>
+<h2>関連資料</h2>
+<ul>
+<li><a href="api.html">api.md</a> — MCP ツール仕様</li>
+<li><a href="operation.html">operation.md</a> — ユーザ操作フロー</li>
+<li><a href="ui-design.html">ui-design.md</a> — UI タスク時の統一ルール</li>
+</ul>
+<h2>エージェント一覧</h2>
+<table>
+<thead>
+<tr>
+<th>エージェント</th>
+<th>役割</th>
+<th>使用ツール</th>
+<th>ユーザ呼び出し</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>orchestrator</td>
+<td>全体フロー管理、再計画ループ、サブエージェント呼び出し</td>
+<td>askQuestions, agent, todo</td>
+<td>可</td>
+</tr>
+<tr>
+<td>splitter</td>
+<td>タスク規模判定と分割</td>
+<td>read, search, file_info, json_read, yaml_read</td>
+<td>不可</td>
+</tr>
+<tr>
+<td>interviewer</td>
+<td>ヒアリング、追加指示整理、<a href="http://preferences.md">preferences.md</a> 更新</td>
+<td>askQuestions, read, search, copilot_work_write</td>
+<td>不可</td>
+</tr>
+<tr>
+<td>investigator</td>
+<td>コードベース調査、履歴確認</td>
+<td>read, search, file_info, git_status, git_log, git_show, git_diff, copilot_work_write, json_read, xml_read, yaml_read, toml_read, ini_read</td>
+<td>不可</td>
+</tr>
+<tr>
+<td>planner</td>
+<td>計画作成と再計画</td>
+<td>read, search, copilot_work_write, json_read, xml_read, yaml_read, toml_read, ini_read</td>
+<td>不可</td>
+</tr>
+<tr>
+<td>developer</td>
+<td>実装と開発結果作成</td>
+<td>read, edit, search, copilot_work_write, json_read, json_write, json_get, json_set, xml_read, xml_write, yaml_read, yaml_write, toml_read, toml_write, ini_read, ini_write</td>
+<td>不可</td>
+</tr>
+<tr>
+<td>tester</td>
+<td>テスト実行、失敗修正、test-report 出力</td>
+<td>read, edit, search, copilot_work_write, maven_<em>, gradle_</em>, java_<em>, dotnet_</em>, json_read, json_write, xml_read, xml_write, yaml_read, yaml_write</td>
+<td>不可</td>
+</tr>
+<tr>
+<td>reviewer</td>
+<td>技術レビューと再計画要求</td>
+<td>read, search, copilot_work_write, json_read, xml_read, yaml_read, toml_read, ini_read</td>
+<td>不可</td>
+</tr>
+<tr>
+<td>documenter</td>
+<td><code>.copilot-docs/</code> 更新と HTML 生成</td>
+<td>read, search, copilot_docs_write, md2html, git_status, git_diff, git_log, json_read, yaml_read, toml_read</td>
+<td>不可</td>
+</tr>
+</tbody>
+</table>
+<h2>共有制御ルート</h2>
+<p>複数フォルダワークスペースでは、<code>agents/</code>、<code>instructions/</code>、<code>.copilot-docs/</code>、<code>.copilot-work/</code> を持つフォルダを共有制御ルートとして扱う。</p>
+<ul>
+<li><code>.copilot-work/</code> と <code>.copilot-docs/</code> の読み書きは常にこのルートに集約する</li>
+<li><code>.copilot-docs-html/</code> も同じルートに生成する</li>
+<li>実装対象のコード探索は他ワークスペースフォルダへ広げてよい</li>
+</ul>
+<h2>管理ファイルの流れ</h2>
+<table>
+<thead>
+<tr>
+<th>生成者</th>
+<th>出力先</th>
+<th>主な消費者</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>interviewer</td>
+<td><code>.copilot-work/[task-id]/hearing.md</code></td>
+<td>planner, documenter</td>
+</tr>
+<tr>
+<td>interviewer</td>
+<td><code>.copilot-work/[task-id]/preferences.md</code></td>
+<td>planner, developer, reviewer, documenter</td>
+</tr>
+<tr>
+<td>investigator</td>
+<td><code>.copilot-work/[task-id]/investigation.md</code></td>
+<td>planner</td>
+</tr>
+<tr>
+<td>planner</td>
+<td><code>.copilot-work/[task-id]/plans/plan[n].md</code></td>
+<td>developer</td>
+</tr>
+<tr>
+<td>developer</td>
+<td><code>.copilot-work/[task-id]/devs/dev[n].md</code></td>
+<td>reviewer</td>
+</tr>
+<tr>
+<td>tester</td>
+<td><code>.copilot-work/[task-id]/test-report.md</code></td>
+<td>reviewer</td>
+</tr>
+<tr>
+<td>reviewer</td>
+<td><code>.copilot-work/[task-id]/review.md</code></td>
+<td>planner</td>
+</tr>
+<tr>
+<td>documenter</td>
+<td><code>.copilot-docs/</code>, <code>.copilot-docs-html/</code></td>
+<td>ユーザ</td>
+</tr>
+</tbody>
+</table>
+<h2>好み・方向性の保持</h2>
+<p>ユーザの計画修正や追加指示で継続的な嗜好が判明した場合、orchestrator は interviewer を通して <code>.copilot-work/[task-id]/preferences.md</code> を更新する。</p>
+<ul>
+<li>planner は再計画時も <a href="http://preferences.md">preferences.md</a> を前提条件として読む</li>
+<li>developer と reviewer は実装・評価の両方で同じ方向性を維持する</li>
+<li>繰り返し現れるルールは instructions / skills への昇格候補として扱う</li>
+</ul>
+<h2>開発フロー</h2>
+<p>通常の開発フローは次のループで進む。</p>
+<pre><code class="language-text">1. orchestrator が共有制御ルートとタスク種別を確定する
+2. 必要に応じて splitter でタスクを分割する
+3. investigator が調査結果を作る
+4. planner が plan を作る
+5. ユーザが plan に対して ok / ng / 追加指示 / 追加指示ファイル / interviewer 整理 を選ぶ
+6. ok なら developer → tester → reviewer を進める
+7. reviewer が ng を返した場合は plan 作成に戻る
+8. reviewer が ok を返したら documenter が `.copilot-docs/` を更新し、`md2html` で `.copilot-docs-html/` を再生成する
+9. 最終結果に対してユーザが ok を返すまで、orchestrator が追加指示を整理して 1 に戻る
+</code></pre>
+<h2>設計・調査・セットアップフロー</h2>
+<table>
+<thead>
+<tr>
+<th>種別</th>
+<th>概要</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>設計</td>
+<td>interviewer が詳細ヒアリングを行い、その結果をそのまま実装または文書化に接続する</td>
+</tr>
+<tr>
+<td>調査</td>
+<td>investigator の結果をもとに、実装へ進むか文書化だけで終えるかを選ぶ</td>
+</tr>
+<tr>
+<td>セットアップ</td>
+<td>investigator → planner → documenter の順でドキュメント整備を行い、HTML 版も再生成する</td>
+</tr>
+</tbody>
+</table>
+
+        </article>
+      </main>
+    </div>
+    
+      <script>
+        const searchInput = document.getElementById("page-search");
+        const searchStatus = document.getElementById("search-status");
+        const targets = Array.from(document.querySelectorAll("article h1, article h2, article h3, article h4, article p, article li, article pre, article td, article th"));
+
+        const clearHits = () => {
+          for (const target of targets) {
+            target.classList.remove("search-hit");
+          }
+        };
+
+        if (searchInput && searchStatus) {
+          searchInput.addEventListener("input", () => {
+            const query = searchInput.value.trim().toLowerCase();
+            clearHits();
+
+            if (!query) {
+              searchStatus.textContent = "検索語を入力すると該当箇所を強調表示します。";
+              return;
+            }
+
+            const hits = targets.filter((target) => target.textContent && target.textContent.toLowerCase().includes(query));
+            for (const hit of hits) {
+              hit.classList.add("search-hit");
+            }
+
+            if (hits.length > 0) {
+              hits[0].scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+
+            searchStatus.textContent = hits.length + " 件ヒットしました。";
+          });
+        }
+      </script>
+  </body>
+</html>

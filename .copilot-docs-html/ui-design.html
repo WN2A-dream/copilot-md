@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>UI デザインガイド</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f3efe6;
+        --surface: rgba(255, 252, 247, 0.92);
+        --surface-strong: #fffaf1;
+        --ink: #2d2418;
+        --muted: #6e6255;
+        --line: rgba(106, 88, 62, 0.18);
+        --accent: #915f36;
+        --accent-soft: rgba(145, 95, 54, 0.12);
+        --hit: #ffe29a;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Yu Gothic UI", "Hiragino Sans", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(205, 179, 136, 0.24), transparent 28%),
+          linear-gradient(180deg, #fcf7ef 0%, var(--bg) 100%);
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+        gap: 24px;
+        padding: 24px;
+      }
+
+      nav, main {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(92, 71, 44, 0.08);
+      }
+
+      nav {
+        padding: 20px;
+        position: sticky;
+        top: 24px;
+        align-self: start;
+      }
+
+      nav h1 {
+        margin: 0 0 8px;
+        font-size: 1.1rem;
+      }
+
+      nav p {
+        margin: 0 0 16px;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      nav ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 8px;
+      }
+
+      nav a {
+        display: block;
+        padding: 10px 12px;
+        border-radius: 12px;
+        color: inherit;
+        text-decoration: none;
+        background: transparent;
+      }
+
+      nav a[aria-current="page"] {
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-weight: 700;
+      }
+
+      main {
+        padding: 28px;
+      }
+
+      .search-panel {
+        margin-bottom: 24px;
+        padding: 16px;
+        border-radius: 16px;
+        background: var(--surface-strong);
+        border: 1px solid var(--line);
+      }
+
+      .search-panel label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 700;
+      }
+
+      .search-panel input {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        font: inherit;
+        background: white;
+      }
+
+      .search-panel p {
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      article {
+        line-height: 1.75;
+      }
+
+      article h1, article h2, article h3, article h4 {
+        line-height: 1.3;
+      }
+
+      article pre {
+        overflow-x: auto;
+        padding: 14px;
+        border-radius: 14px;
+        background: #2a2118;
+        color: #f8f1e4;
+      }
+
+      article code {
+        font-family: "Cascadia Code", Consolas, monospace;
+      }
+
+      article table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+
+      article th, article td {
+        border: 1px solid var(--line);
+        padding: 10px 12px;
+        text-align: left;
+      }
+
+      .search-hit {
+        background: linear-gradient(180deg, transparent 0%, transparent 20%, var(--hit) 20%, var(--hit) 100%);
+      }
+
+      @media (max-width: 900px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        nav {
+          position: static;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <nav>
+        <h1>資料ナビゲーション</h1>
+        <p>生成済み HTML を横断して閲覧できます。</p>
+        <ul>
+          <li><a href="agents.html">AI エージェント一覧と開発フロー</a></li>
+<li><a href="api.html">MCP ツール一覧・仕様</a></li>
+<li><a href="architecture.html">アーキテクチャ概要</a></li>
+<li><a href="index.html">ドキュメント目次</a></li>
+<li><a href="operation.html">運用・操作フロー</a></li>
+<li><a href="ui-design.html" aria-current="page">UI デザインガイド</a></li>
+        </ul>
+      </nav>
+      <main>
+        
+      <section class="search-panel" aria-label="ページ内検索">
+        <label for="page-search">ページ内検索</label>
+        <input id="page-search" type="search" placeholder="見出しや本文を検索" />
+        <p id="search-status">検索語を入力すると該当箇所を強調表示します。</p>
+      </section>
+        <article>
+          <h1>UI デザインガイド</h1>
+<p>UI を伴う変更で、配色・余白・情報密度・操作感をばらつかせないための最小ガイド。</p>
+<h2>この資料で分かること</h2>
+<ul>
+<li>UI 実装時に維持すべき共通方針</li>
+<li>新しい画面やコンポーネントを追加するときの判断軸</li>
+</ul>
+<h2>関連資料</h2>
+<ul>
+<li><a href="agents.html">agents.md</a> — planner / developer / documenter の役割</li>
+<li><a href="operation.html">operation.md</a> — 実装依頼から文書更新までの流れ</li>
+</ul>
+<h2>デザイン方針</h2>
+<ul>
+<li>既存画面の文脈を壊さず、画面単位ではなくプロダクト全体で一貫した見た目にする</li>
+<li>目的の弱い装飾は増やさず、情報構造・視線誘導・操作の分かりやすさを優先する</li>
+<li>余白、文字サイズ、強調色、角丸、モーションは画面ごとに変えず、理由があるときだけ更新する</li>
+<li>デスクトップとモバイルの両方で読みやすく、主要操作に到達しやすい構成にする</li>
+</ul>
+<h2>基本トークン</h2>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>基本方針</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>色</td>
+<td>ベース色、強調色、警告色を固定し、同じ意味に同じ色を使う</td>
+</tr>
+<tr>
+<td>文字</td>
+<td>見出し、本文、補助テキストの階層を 3 段程度に抑える</td>
+</tr>
+<tr>
+<td>余白</td>
+<td>4 または 8 の倍数で揃え、密度を画面ごとに変えすぎない</td>
+</tr>
+<tr>
+<td>角丸</td>
+<td>コンテナと入力系で段階を分けつつ、値の種類を増やしすぎない</td>
+</tr>
+<tr>
+<td>影</td>
+<td>浮かせたい要素だけに限定し、常用しない</td>
+</tr>
+<tr>
+<td>モーション</td>
+<td>初回表示、展開、並び替えなど意味のある場面だけに使う</td>
+</tr>
+</tbody>
+</table>
+<h2>レイアウト方針</h2>
+<table>
+<thead>
+<tr>
+<th>対象</th>
+<th>ルール</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ページ全体</td>
+<td>主要操作、主コンテンツ、補助情報の順で視線が流れる構成にする</td>
+</tr>
+<tr>
+<td>フォーム</td>
+<td>ラベル、入力、補足、エラーの並びを固定する</td>
+</tr>
+<tr>
+<td>一覧</td>
+<td>見出し、絞り込み、並び替え、行アクションの位置を揃える</td>
+</tr>
+<tr>
+<td>モーダル</td>
+<td>破壊的操作を分離し、閉じ方を明確にする</td>
+</tr>
+<tr>
+<td>空状態 / エラー</td>
+<td>原因、影響、次の行動を 1 画面で分かるようにする</td>
+</tr>
+</tbody>
+</table>
+<h2>実装ルール</h2>
+<ul>
+<li>planner は UI を含むタスクでこの資料を読み、必要なら計画に更新項目を含める</li>
+<li>developer は既存 UI とこの資料の両方に合わせて実装し、新しいパターンを勝手に増やさない</li>
+<li>documenter は UI の方向性が変わったとき、この資料を更新してから HTML 版も再生成する</li>
+<li>ユーザから UI の嗜好が繰り返し指定された場合は <code>.copilot-work/[task-id]/preferences.md</code> に保持し、必要なら instructions や skills への昇格候補とする</li>
+</ul>
+<h2>更新が必要なケース</h2>
+<ul>
+<li>新しい画面種別を追加し、既存のレイアウト規則だけでは判断できないとき</li>
+<li>主要な配色、タイポグラフィ、余白、モーションの基準を変更するとき</li>
+<li>コンポーネントの再利用方針を変えるとき</li>
+</ul>
+
+        </article>
+      </main>
+    </div>
+    
+      <script>
+        const searchInput = document.getElementById("page-search");
+        const searchStatus = document.getElementById("search-status");
+        const targets = Array.from(document.querySelectorAll("article h1, article h2, article h3, article h4, article p, article li, article pre, article td, article th"));
+
+        const clearHits = () => {
+          for (const target of targets) {
+            target.classList.remove("search-hit");
+          }
+        };
+
+        if (searchInput && searchStatus) {
+          searchInput.addEventListener("input", () => {
+            const query = searchInput.value.trim().toLowerCase();
+            clearHits();
+
+            if (!query) {
+              searchStatus.textContent = "検索語を入力すると該当箇所を強調表示します。";
+              return;
+            }
+
+            const hits = targets.filter((target) => target.textContent && target.textContent.toLowerCase().includes(query));
+            for (const hit of hits) {
+              hit.classList.add("search-hit");
+            }
+
+            if (hits.length > 0) {
+              hits[0].scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+
+            searchStatus.textContent = hits.length + " 件ヒットしました。";
+          });
+        }
+      </script>
+  </body>
+</html>
