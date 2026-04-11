@@ -34,6 +34,6 @@ project-root/
     [その他必要なドキュメント]
   .vscode/
     mcp.json           # MCP サーバー設定
-  .gitignore          # .copilot-docs, .copilot-work, .github以下のドキュメントはgit管理対象外とする
+  .gitignore          # .copilot-docs, .copilot-docs-html, .copilot-work, .github以下のドキュメントはgit管理対象外とする
   README.md           # プロジェクト概要
 ```
