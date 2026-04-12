@@ -187,18 +187,148 @@
       </section>
         <article>
           <h1>アーキテクチャ概要</h1>
-<p>local-command MCP サーバーは、シェルコマンド実行・管理領域書き込み・Markdown 変換・構造化データファイル操作を構造化パラメータで提供する。</p>
+<p>GitHub Copilot エージェント設定リポジトリのアーキテクチャを説明する。エージェント間の連携構造と、local-command MCP サーバーの内部構成を含む。</p>
 <h2>この資料で分かること</h2>
 <ul>
-<li>システム全体像と主要モジュール</li>
-<li>ツール登録の流れと安全制約</li>
+<li>エージェント間の連携とタスクフロー</li>
+<li>ファイルベース IPC とコンテキスト節約戦略</li>
+<li>MCP サーバーのモジュール構成と安全制約</li>
 </ul>
 <h2>関連資料</h2>
 <ul>
-<li><a href="api.html">api.md</a> — ツール一覧と仕様の詳細</li>
-<li><a href="agents.html">agents.md</a> — 各エージェントの利用ツール</li>
+<li><a href="agents.html">agents.md</a> — 各エージェントの詳細と指示書</li>
+<li><a href="api.html">api.md</a> — MCP ツール一覧と仕様</li>
+<li><a href="operation.html">operation.md</a> — ユーザ操作フロー</li>
 </ul>
-<h2>技術スタック</h2>
+<h2>エージェントアーキテクチャ</h2>
+<h3>全体構成</h3>
+<p>orchestrator を中心としたハブ＆スポーク構造で、サブエージェントを必要に応じて呼び出す。</p>
+<pre><code class="language-mermaid">graph TD
+    User[ユーザ/IDE]
+    Orch[orchestrator]
+    Split[splitter]
+    Int[interviewer]
+    Inv[investigator]
+    Plan[planner]
+    Dev[developer]
+    Test[tester]
+    Rev[reviewer]
+    Doc[documenter]
+
+    User --&gt; Orch
+    Orch --&gt; Split
+    Orch --&gt; Int
+    Orch --&gt; Inv
+    Orch --&gt; Plan
+    Orch --&gt; Dev
+    Orch --&gt; Test
+    Orch --&gt; Rev
+    Orch --&gt; Doc
+</code></pre>
+<h3>タスクモード</h3>
+<p>orchestrator はタスク種別に応じて4つのモードを使い分ける。</p>
+<table>
+<thead>
+<tr>
+<th>モード</th>
+<th>概要</th>
+<th>主なフロー</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>setup</td>
+<td>ドキュメント整備、初期設定</td>
+<td>investigator → planner → documenter</td>
+</tr>
+<tr>
+<td>design</td>
+<td>要件ヒアリング、設計検討</td>
+<td>interviewer → planner</td>
+</tr>
+<tr>
+<td>investigation</td>
+<td>コードベース調査のみ</td>
+<td>investigator</td>
+</tr>
+<tr>
+<td>development</td>
+<td>コード実装・修正</td>
+<td>investigator → planner → developer → tester → reviewer → documenter</td>
+</tr>
+</tbody>
+</table>
+<h3>ファイルベース IPC</h3>
+<p>エージェント間のデータ受け渡しは <code>.copilot-work/[task-id]/</code> 以下のファイルを介して行う。プロンプトには <strong>タスク ID・タスク内容・入力ファイルパス</strong> のみを含め、調査結果や計画内容はファイル参照で渡す。</p>
+<pre><code class="language-mermaid">flowchart LR
+    subgraph &quot;.copilot-work/[task-id]/&quot;
+        H[hearing.md]
+        P[preferences.md]
+        I[investigation.md]
+        PL[plans/plan*.md]
+        D[devs/dev*.md]
+        T[test-report.md]
+        R[review.md]
+    end
+
+    interviewer --&gt; H
+    interviewer --&gt; P
+    investigator --&gt; I
+    planner --&gt; PL
+    developer --&gt; D
+    tester --&gt; T
+    reviewer --&gt; R
+
+    H --&gt; planner
+    P --&gt; planner
+    P --&gt; developer
+    P --&gt; reviewer
+    I --&gt; planner
+    PL --&gt; developer
+    D --&gt; reviewer
+    T --&gt; reviewer
+    R --&gt; planner
+</code></pre>
+<h3>コンテキスト節約戦略</h3>
+<table>
+<thead>
+<tr>
+<th>戦略</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ファイルパス参照</td>
+<td>調査結果・計画内容をプロンプトに含めず、パスで参照させる</td>
+</tr>
+<tr>
+<td>並列実行</td>
+<td>依存関係のないサブエージェント呼び出しを並列化する</td>
+</tr>
+<tr>
+<td>集約呼び出し</td>
+<td>documenter は全サブタスク完了後に1回のみ呼び出す</td>
+</tr>
+<tr>
+<td>最小出力</td>
+<td>各エージェントは必要最小限の情報のみファイルに書き出す</td>
+</tr>
+</tbody>
+</table>
+<h3>エージェント間依存関係</h3>
+<pre><code class="language-mermaid">graph LR
+    Inv[investigator] --&gt; Plan[planner]
+    Plan --&gt; Dev[developer]
+    Dev --&gt; Test[tester]
+    Dev --&gt; Rev[reviewer]
+    Test --&gt; Rev
+    Rev --&gt;|ng| Plan
+    Rev --&gt;|ok| Doc[documenter]
+</code></pre>
+<h2>MCP サーバーアーキテクチャ</h2>
+<p>local-command MCP サーバーは、シェルコマンド実行・管理領域書き込み・Markdown 変換・構造化データファイル操作を構造化パラメータで提供する。</p>
+<h3>技術スタック</h3>
 <table>
 <thead>
 <tr>
@@ -230,7 +360,7 @@
 </tr>
 </tbody>
 </table>
-<h2>データフロー</h2>
+<h3>データフロー</h3>
 <pre><code class="language-text">エージェント
   ↓ MCP リクエスト（構造化パラメータ）
 MCP サーバー — .copilot-mcp/src/index.ts
@@ -243,7 +373,7 @@ MCP サーバー — .copilot-mcp/src/index.ts
   ↓ MCP レスポンス
 エージェント
 </code></pre>
-<h2>モジュール構成</h2>
+<h3>モジュール構成</h3>
 <table>
 <thead>
 <tr>
@@ -348,7 +478,7 @@ MCP サーバー — .copilot-mcp/src/index.ts
 </tr>
 </tbody>
 </table>
-<h2>ツール登録の仕組み</h2>
+<h3>ツール登録の仕組み</h3>
 <p>各モジュールは <code>ToolDefinition[]</code> をエクスポートする。<code>.copilot-mcp/src/index.ts</code> がこれらを結合し、<code>toolMap</code> に登録する。</p>
 <ul>
 <li>コマンド実行系は <code>executor.ts</code> を経由して OS プロセスを起動する</li>
@@ -356,7 +486,7 @@ MCP サーバー — .copilot-mcp/src/index.ts
 <li><code>md2html</code> は Markdown ファイルまたはディレクトリを受け取り、<code>.copilot-docs-html/</code> などの静的 HTML 出力を生成する</li>
 <li>構造化ファイル操作系は JSON、YAML、XML、TOML、INI を読み書きし、JSONPath によるピンポイント操作も提供する</li>
 </ul>
-<h2>セキュリティモデル</h2>
+<h3>セキュリティモデル</h3>
 <table>
 <thead>
 <tr>
@@ -413,7 +543,7 @@ MCP サーバー — .copilot-mcp/src/index.ts
 </tr>
 </tbody>
 </table>
-<h2>設定</h2>
+<h3>設定</h3>
 <p><code>config.yaml</code> で以下を変更できる。型が不正な場合はデフォルト値を使う。</p>
 <table>
 <thead>

@@ -314,9 +314,8 @@ function run_subtask(task_id, task, existing_investigation_filepath = null, pref
       result = call /developer(task_id, plan_filepath)
       dev_result_filepath_array.append(result)
 
-    // ── テスト（プロジェクトにテストが存在する場合） ──
-    if project_has_tests():
-      test_report = call /tester(task_id)
+    // ── テスト ──
+    test_report = call /tester(task_id)
 
     // ── レビュー ──
     review = call /reviewer(task_id, dev_result_filepath_array)

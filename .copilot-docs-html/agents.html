@@ -187,85 +187,447 @@
       </section>
         <article>
           <h1>AI エージェント一覧と開発フロー</h1>
-<p><code>agents/</code> 配下の定義ファイルに対応する運用資料。共有制御ルート、権限の切り分け、再計画ループを含めて現在のフローを整理する。</p>
+<p><code>agents/</code> 配下のエージェント定義と <code>instructions/</code> 配下の指示書の詳細を説明する。</p>
 <h2>この資料で分かること</h2>
 <ul>
-<li>各エージェントの責務と使用ツール</li>
-<li>共有制御ルートと管理ファイルの流れ</li>
+<li>各エージェントの責務、入出力、呼び出しタイミング</li>
+<li>指示書の適用対象と優先順位</li>
+<li>エージェント間の依存関係とデータの流れ</li>
 </ul>
 <h2>関連資料</h2>
 <ul>
+<li><a href="architecture.html">architecture.md</a> — 全体構成とデータフロー</li>
 <li><a href="api.html">api.md</a> — MCP ツール仕様</li>
 <li><a href="operation.html">operation.md</a> — ユーザ操作フロー</li>
-<li><a href="ui-design.html">ui-design.md</a> — UI タスク時の統一ルール</li>
 </ul>
-<h2>エージェント一覧</h2>
+<h2>エージェント概要</h2>
 <table>
 <thead>
 <tr>
 <th>エージェント</th>
 <th>役割</th>
-<th>使用ツール</th>
 <th>ユーザ呼び出し</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>orchestrator</td>
-<td>全体フロー管理、再計画ループ、サブエージェント呼び出し</td>
-<td>askQuestions, agent, todo</td>
+<td>タスク管理、サブエージェント呼び出し、再計画ループ</td>
 <td>可</td>
 </tr>
 <tr>
 <td>splitter</td>
-<td>タスク規模判定と分割</td>
-<td>read, search, file_info, json_read, yaml_read</td>
+<td>タスク規模判定、コンテキスト分割</td>
 <td>不可</td>
 </tr>
 <tr>
 <td>interviewer</td>
-<td>ヒアリング、追加指示整理、<a href="http://preferences.md">preferences.md</a> 更新</td>
-<td>askQuestions, read, search, copilot_work_write</td>
+<td>ユーザヒアリング、要件明確化</td>
 <td>不可</td>
 </tr>
 <tr>
 <td>investigator</td>
-<td>コードベース調査、履歴確認</td>
-<td>read, search, file_info, git_status, git_log, git_show, git_diff, copilot_work_write, json_read, xml_read, yaml_read, toml_read, ini_read</td>
+<td>コードベース調査、情報収集</td>
 <td>不可</td>
 </tr>
 <tr>
 <td>planner</td>
-<td>計画作成と再計画</td>
-<td>read, search, copilot_work_write, json_read, xml_read, yaml_read, toml_read, ini_read</td>
+<td>実装計画作成</td>
 <td>不可</td>
 </tr>
 <tr>
 <td>developer</td>
-<td>実装と開発結果作成</td>
-<td>read, edit, search, copilot_work_write, json_read, json_write, json_get, json_set, xml_read, xml_write, yaml_read, yaml_write, toml_read, toml_write, ini_read, ini_write</td>
+<td>コード実装</td>
 <td>不可</td>
 </tr>
 <tr>
 <td>tester</td>
-<td>テスト実行、失敗修正、test-report 出力</td>
-<td>read, edit, search, copilot_work_write, maven_<em>, gradle_</em>, java_<em>, dotnet_</em>, json_read, json_write, xml_read, xml_write, yaml_read, yaml_write</td>
+<td>テスト実行・修正</td>
 <td>不可</td>
 </tr>
 <tr>
 <td>reviewer</td>
-<td>技術レビューと再計画要求</td>
-<td>read, search, copilot_work_write, json_read, xml_read, yaml_read, toml_read, ini_read</td>
+<td>コードレビュー</td>
 <td>不可</td>
 </tr>
 <tr>
 <td>documenter</td>
-<td><code>.copilot-docs/</code> 更新と HTML 生成</td>
-<td>read, search, copilot_docs_write, md2html, git_status, git_diff, git_log, json_read, yaml_read, toml_read</td>
+<td>ドキュメント更新、HTML 生成</td>
 <td>不可</td>
 </tr>
 </tbody>
 </table>
+<h2>エージェント詳細</h2>
+<h3>orchestrator</h3>
+<p>タスクの受付からサブエージェントの呼び出し、完了判定までを管理する。</p>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>定義ファイル</td>
+<td><code>agents/orchestrator.agent.md</code></td>
+</tr>
+<tr>
+<td>使用ツール</td>
+<td>askQuestions, agent, todo</td>
+</tr>
+<tr>
+<td>入力</td>
+<td>ユーザからのタスク依頼</td>
+</tr>
+<tr>
+<td>出力</td>
+<td>サブエージェント呼び出し、最終結果報告</td>
+</tr>
+<tr>
+<td>モード</td>
+<td>setup, design, investigation, development</td>
+</tr>
+</tbody>
+</table>
+<h4>呼び出しタイミング</h4>
+<ul>
+<li>ユーザが Copilot Chat でタスクを依頼したとき</li>
+</ul>
+<h3>splitter</h3>
+<p>タスクがコンテキストサイズに収まるかを判定し、必要に応じて分割する。</p>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>定義ファイル</td>
+<td><code>agents/splitter.agent.md</code></td>
+</tr>
+<tr>
+<td>使用ツール</td>
+<td>read, search, file_info, json_read, yaml_read</td>
+</tr>
+<tr>
+<td>入力</td>
+<td>タスク内容、コードベース情報</td>
+</tr>
+<tr>
+<td>出力</td>
+<td>分割判定結果、サブタスク一覧</td>
+</tr>
+</tbody>
+</table>
+<h4>呼び出しタイミング</h4>
+<ul>
+<li>orchestrator がタスク規模を判定するとき</li>
+</ul>
+<h3>interviewer</h3>
+<p>ユーザから要件を聞き出し、明確化する。ヒアリング結果と継続的な嗜好を記録する。</p>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>定義ファイル</td>
+<td><code>agents/interviewer.agent.md</code></td>
+</tr>
+<tr>
+<td>使用ツール</td>
+<td>askQuestions, read, search, copilot_work_write</td>
+</tr>
+<tr>
+<td>入力</td>
+<td>ユーザ応答、既存の <a href="http://preferences.md">preferences.md</a></td>
+</tr>
+<tr>
+<td>出力</td>
+<td><code>.copilot-work/[task-id]/hearing.md</code>, <code>.copilot-work/[task-id]/preferences.md</code></td>
+</tr>
+<tr>
+<td>モード</td>
+<td>development, design</td>
+</tr>
+</tbody>
+</table>
+<h4>呼び出しタイミング</h4>
+<ul>
+<li>要件が不明確でヒアリングが必要なとき</li>
+<li>ユーザが追加指示を整理したいとき</li>
+<li>継続的な嗜好の記録が必要なとき</li>
+</ul>
+<h3>investigator</h3>
+<p>コードベースを調査し、実装に必要な情報を収集する。</p>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>定義ファイル</td>
+<td><code>agents/investigator.agent.md</code></td>
+</tr>
+<tr>
+<td>使用ツール</td>
+<td>read, search, file_info, git_status, git_log, git_show, git_diff, copilot_work_write, json_read, xml_read, yaml_read, toml_read, ini_read</td>
+</tr>
+<tr>
+<td>入力</td>
+<td>タスク内容、コードベース</td>
+</tr>
+<tr>
+<td>出力</td>
+<td><code>.copilot-work/[task-id]/investigation.md</code></td>
+</tr>
+</tbody>
+</table>
+<h4>呼び出しタイミング</h4>
+<ul>
+<li>実装計画の前に現状把握が必要なとき</li>
+<li>調査のみのタスクを実行するとき</li>
+</ul>
+<h3>planner</h3>
+<p>調査結果に基づいて実装計画を作成する。レビュー ng 時は再計画を行う。</p>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>定義ファイル</td>
+<td><code>agents/planner.agent.md</code></td>
+</tr>
+<tr>
+<td>使用ツール</td>
+<td>read, search, copilot_work_write, json_read, xml_read, yaml_read, toml_read, ini_read</td>
+</tr>
+<tr>
+<td>入力</td>
+<td><code>investigation.md</code>, <code>hearing.md</code>, <code>preferences.md</code>, <code>review.md</code>（再計画時）</td>
+</tr>
+<tr>
+<td>出力</td>
+<td><code>.copilot-work/[task-id]/plans/plan[n].md</code></td>
+</tr>
+</tbody>
+</table>
+<h4>呼び出しタイミング</h4>
+<ul>
+<li>investigator の調査完了後</li>
+<li>reviewer が ng を返したとき（再計画）</li>
+</ul>
+<h3>developer</h3>
+<p>計画に基づいてコードを実装する。</p>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>定義ファイル</td>
+<td><code>agents/developer.agent.md</code></td>
+</tr>
+<tr>
+<td>使用ツール</td>
+<td>read, edit, search, copilot_work_write, json_read, json_write, json_get, json_set, xml_read, xml_write, yaml_read, yaml_write, toml_read, toml_write, ini_read, ini_write</td>
+</tr>
+<tr>
+<td>入力</td>
+<td><code>plans/plan[n].md</code>, <code>preferences.md</code></td>
+</tr>
+<tr>
+<td>出力</td>
+<td>実装ファイル, <code>.copilot-work/[task-id]/devs/dev[n].md</code></td>
+</tr>
+</tbody>
+</table>
+<h4>呼び出しタイミング</h4>
+<ul>
+<li>ユーザが plan に ok を返したとき</li>
+</ul>
+<h3>tester</h3>
+<p>テストを実行し、失敗時は修正を行う。</p>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>定義ファイル</td>
+<td><code>agents/tester.agent.md</code></td>
+</tr>
+<tr>
+<td>使用ツール</td>
+<td>read, edit, search, copilot_work_write, maven_<em>, gradle_</em>, java_<em>, dotnet_</em>, json_read, json_write, xml_read, xml_write, yaml_read, yaml_write</td>
+</tr>
+<tr>
+<td>入力</td>
+<td>実装ファイル, テストコード</td>
+</tr>
+<tr>
+<td>出力</td>
+<td><code>.copilot-work/[task-id]/test-report.md</code></td>
+</tr>
+<tr>
+<td>対応フレームワーク</td>
+<td>Maven, Gradle, Java（ビルドツールなし）, dotnet</td>
+</tr>
+</tbody>
+</table>
+<h4>呼び出しタイミング</h4>
+<ul>
+<li>developer の実装完了後</li>
+</ul>
+<h3>reviewer</h3>
+<p>コードレビューを行い、問題があれば再計画を要求する。</p>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>定義ファイル</td>
+<td><code>agents/reviewer.agent.md</code></td>
+</tr>
+<tr>
+<td>使用ツール</td>
+<td>read, search, copilot_work_write, json_read, xml_read, yaml_read, toml_read, ini_read</td>
+</tr>
+<tr>
+<td>入力</td>
+<td><code>devs/dev[n].md</code>, <code>test-report.md</code>, <code>preferences.md</code></td>
+</tr>
+<tr>
+<td>出力</td>
+<td><code>.copilot-work/[task-id]/review.md</code></td>
+</tr>
+</tbody>
+</table>
+<h4>呼び出しタイミング</h4>
+<ul>
+<li>tester のテスト完了後（または developer の実装完了後）</li>
+</ul>
+<h3>documenter</h3>
+<p>ドキュメントを更新し、HTML 版を生成する。</p>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>定義ファイル</td>
+<td><code>agents/documenter.agent.md</code></td>
+</tr>
+<tr>
+<td>使用ツール</td>
+<td>read, search, copilot_docs_write, md2html, git_status, git_diff, git_log, json_read, yaml_read, toml_read</td>
+</tr>
+<tr>
+<td>入力</td>
+<td>開発結果ファイル群、既存の <code>.copilot-docs/</code></td>
+</tr>
+<tr>
+<td>出力</td>
+<td><code>.copilot-docs/</code> 更新, <code>.copilot-docs-html/</code> 再生成</td>
+</tr>
+</tbody>
+</table>
+<h4>呼び出しタイミング</h4>
+<ul>
+<li>全サブタスクの reviewer が ok を返した後（1回のみ）</li>
+</ul>
+<h2>指示書一覧</h2>
+<table>
+<thead>
+<tr>
+<th>ファイル</th>
+<th>適用対象</th>
+<th>概要</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>default.instructions.md</code></td>
+<td><code>**/*</code></td>
+<td>プロジェクト全体のルールとフロー定義</td>
+</tr>
+<tr>
+<td><code>mcp.instructions.md</code></td>
+<td>エージェント全般</td>
+<td>local-command MCP ツール利用ガイド</td>
+</tr>
+<tr>
+<td><code>copilot-docs.instructions.md</code></td>
+<td><code>.copilot-docs/**/*.md</code></td>
+<td>ドキュメント構成ルール（AI 最適化）</td>
+</tr>
+<tr>
+<td><code>markdown.instructions.md</code></td>
+<td><code>**/*.md</code></td>
+<td>markdownlint ルール抜粋</td>
+</tr>
+</tbody>
+</table>
+<h3>指示書の優先順位</h3>
+<ol>
+<li>ファイル固有の指示（<code>applyTo</code> でマッチ）</li>
+<li>プロジェクト全体の指示（<code>default.instructions.md</code>）</li>
+<li>エージェント定義内の指示</li>
+</ol>
+<h3>各指示書の詳細</h3>
+<h4><a href="http://default.instructions.md">default.instructions.md</a></h4>
+<p>プロジェクト全体に適用される基本ルール。</p>
+<ul>
+<li>ドキュメント・コメント・コミットメッセージは日本語</li>
+<li><code>.copilot-docs/</code> と <code>.copilot-work/</code> は共有制御ルートに集約</li>
+<li>UI タスクでは <code>ui-design.md</code> を優先参照</li>
+</ul>
+<h4><a href="http://mcp.instructions.md">mcp.instructions.md</a></h4>
+<p>local-command MCP サーバーのツール利用ルール。</p>
+<ul>
+<li>全ツールに共通する <code>workingDirectory</code> パラメータの指定方法</li>
+<li>カテゴリ別のツール一覧と使用エージェント</li>
+<li>レスポンス形式とエラーハンドリング</li>
+</ul>
+<h4><a href="http://copilot-docs.instructions.md">copilot-docs.instructions.md</a></h4>
+<p><code>.copilot-docs/</code> 配下のドキュメント構成ルール。</p>
+<ul>
+<li>結論 → 判断材料 → 詳細の順で記述</li>
+<li>各ファイル冒頭に3行以内の要約を配置</li>
+<li>「この資料で分かること」「関連資料」を要約直後に配置</li>
+</ul>
+<h4><a href="http://markdown.instructions.md">markdown.instructions.md</a></h4>
+<p>Markdown ファイル全般に適用される記法ルール。</p>
+<ul>
+<li>markdownlint のルール抜粋</li>
+<li>見出しレベルの適切な設定</li>
+</ul>
 <h2>共有制御ルート</h2>
 <p>複数フォルダワークスペースでは、<code>agents/</code>、<code>instructions/</code>、<code>.copilot-docs/</code>、<code>.copilot-work/</code> を持つフォルダを共有制御ルートとして扱う。</p>
 <ul>
@@ -334,15 +696,22 @@
 </ul>
 <h2>開発フロー</h2>
 <p>通常の開発フローは次のループで進む。</p>
-<pre><code class="language-text">1. orchestrator が共有制御ルートとタスク種別を確定する
-2. 必要に応じて splitter でタスクを分割する
-3. investigator が調査結果を作る
-4. planner が plan を作る
-5. ユーザが plan に対して ok / ng / 追加指示 / 追加指示ファイル / interviewer 整理 を選ぶ
-6. ok なら developer → tester → reviewer を進める
-7. reviewer が ng を返した場合は plan 作成に戻る
-8. reviewer が ok を返したら documenter が `.copilot-docs/` を更新し、`md2html` で `.copilot-docs-html/` を再生成する
-9. 最終結果に対してユーザが ok を返すまで、orchestrator が追加指示を整理して 1 に戻る
+<pre><code class="language-mermaid">flowchart TD
+    A[タスク受付] --&gt; B{タスク種別判定}
+    B --&gt;|setup| C[investigator → planner → documenter]
+    B --&gt;|design| D[interviewer → planner]
+    B --&gt;|investigation| E[investigator のみ]
+    B --&gt;|development| F[investigator]
+
+    F --&gt; G[planner]
+    G --&gt; H{plan 確認}
+    H --&gt;|ok| I[developer]
+    H --&gt;|ng/追加指示| G
+    I --&gt; J[tester]
+    J --&gt; K[reviewer]
+    K --&gt;|ok| L[documenter]
+    K --&gt;|ng| G
+    L --&gt; M[完了]
 </code></pre>
 <h2>設計・調査・セットアップフロー</h2>
 <table>
