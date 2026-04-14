@@ -1,12 +1,14 @@
 ---
 name: tester
-description: "テストコードの実装・実行・分析を担当する。テスト失敗時にはコードの修正も行う。Java (Maven/Gradle/ビルドツールなし) および C# (.NET) に対応。テスト追加・テスト検証・レビュー指摘の修正確認で呼び出す"
+description: "テストコードの実装・実行・分析を担当する。テスト失敗時にはコードの修正も行う。Java (Maven/Gradle/ビルドツールなし)、C# (.NET)、Node.js (npm) に対応。テスト追加・テスト検証・レビュー指摘の修正確認で呼び出す"
 tools: [
   read, edit, search, local-command/copilot_work_write,
   local-command/maven_test, local-command/maven_verify, local-command/maven_compile, local-command/maven_clean,
   local-command/gradle_test, local-command/gradle_build, local-command/gradle_clean,
   local-command/java_compile, local-command/java_run,
   local-command/dotnet_test, local-command/dotnet_build, local-command/dotnet_run, local-command/dotnet_clean, local-command/dotnet_restore,
+  local-command/npm_install, local-command/npm_build, local-command/npm_test, local-command/npm_run, local-command/npm_dependencies,
+  local-command/maven_dependencies, local-command/gradle_dependencies, local-command/dotnet_dependencies,
   local-command/json_read, local-command/json_write,
   local-command/xml_read, local-command/xml_write,
   local-command/yaml_read, local-command/yaml_write
@@ -29,6 +31,7 @@ orchestrator などの親エージェントから、テスト追加・テスト�
 - **Java**: Maven (`mvn test`), Gradle (`gradle test`, `./gradlew test`)
 - **Java（ビルドツールなし）**: `javac`, `java`
 - **C#**: .NET CLI (`dotnet test`)
+- **Node.js**: npm (`npm test`, `npm run build`)
 
 ## 入力パラメータ
 
@@ -58,6 +61,9 @@ orchestrator などの親エージェントから、テスト追加・テスト�
 ### 共通
 - テスト実行前に、プロジェクトのビルドツール・テストフレームワークを確認する
 - `.copilot-work/{task_id}/test-report.md` の出力には **`local-command/copilot_work_write`** を使う
+- ビルド/テスト結果は構造化 JSON（`BuildResult`）で返却されるため、`errors` 配列から直接エラー箇所を特定すること
+- `testSummary` フィールドでテスト成功/失敗/スキップ件数を確認すること
+- `success: false` かつ `errors` が空の場合は `rawOutput` を確認して原因を調査すること
 
 ### テスト実装時
 - 計画ファイル (`.copilot-work/{task_id}/plans/`) があれば参照する
@@ -104,30 +110,34 @@ function run_tests(task_id, scope?) -> test_report_filepath:
   //   Gradle → local-command/gradle_test(workingDirectory, testClass?, module?)
   //   plain-java → local-command/java_compile(...) [+ local-command/java_run(...)]
   //   dotnet → local-command/dotnet_test(workingDirectory, filter?, project?)
+  //   npm    → local-command/npm_test(workingDirectory, script?)
   result = call_test_tool(build_tool, scope)
 
-  // ── 結果分析 ──
-  if result.all_passed:
+  // ── 結果分析（構造化 BuildResult を利用） ──
+  if result.success:
     report = summary(result)
     output_path = ".copilot-work/{task_id}/test-report.md"
     call local-command/copilot_work_write(workingDirectory, path="{task_id}/test-report.md", content=report)
     return output_path
 
-  // ── 失敗時の修正ループ（最大3回） ──
-  for attempt in 1..3:
-    failures = parse_failures(result)
-    for each failure in failures:
-      source = find_related_source(failure)
-      fix(source, failure)
-
+  // ── ビルド/テスト失敗時の自動修正ループ（最大3回） ──
+  retry_count = 0
+  while result.success == false and retry_count < 3:
+    errors = result.errors
+    if errors.length == 0:
+      // 構造化エラーがない場合は rawOutput から手動分析
+      break
+    // errors[].file, line, message を使って修正
+    for each error in errors:
+      source = find_related_source(error.file, error.line)
+      fix(source, error.message)
     result = call_test_tool(build_tool, scope)
-    if result.all_passed:
-      report = summary(result, fixes_applied)
-      output_path = ".copilot-work/{task_id}/test-report.md"
-      call local-command/copilot_work_write(workingDirectory, path="{task_id}/test-report.md", content=report)
-      return output_path
+    retry_count++
 
-  report = summary(result, remaining_failures)
+  if result.success:
+    report = summary(result, fixes_applied)
+  else:
+    report = summary(result, remaining_failures)
   output_path = ".copilot-work/{task_id}/test-report.md"
   call local-command/copilot_work_write(workingDirectory, path="{task_id}/test-report.md", content=report)
   return output_path

@@ -1,5 +1,5 @@
 ---
-description: "MCP（local-command）ツールの使用ガイド。local-command MCPサーバー経由で git・ビルド・変換・管理領域書き込みを行う際のルールとパラメータ仕様を定義する。interviewer, investigator, planner, developer, tester, reviewer, documenter, splitter が使用する"
+description: "MCP（local-command）ツールの使用ガイド。local-command MCPサーバー経由で git・ビルド・変換・管理領域操作を行う際のルールとパラメータ仕様を定義する。orchestrator, interviewer, investigator, planner, developer, tester, reviewer, documenter, splitter が使用する"
 ---
 
 # local-command MCPツール利用ガイド
@@ -37,14 +37,17 @@ description: "MCP（local-command）ツールの使用ガイド。local-command 
 | カテゴリ | ツール名プレフィックス | 使用エージェント |
 |---|---|---|
 | Git | `local-command/git_*` | investigator, documenter |
-| 管理領域書き込み | `local-command/{copilot_docs_write,copilot_work_write}` | interviewer, investigator, planner, developer, tester, reviewer, documenter |
+| 管理領域操作 | `local-command/{copilot_docs_read,copilot_docs_write,copilot_work_read,copilot_work_write}` | orchestrator, interviewer, investigator, planner, developer, tester, reviewer, documenter |
 | Markdown 変換 | `local-command/md2html` | documenter |
 | Maven | `local-command/maven_*` | tester |
 | Gradle | `local-command/gradle_*` | tester |
 | Java | `local-command/java_*` | tester |
 | dotnet | `local-command/dotnet_*` | tester |
+| npm | `local-command/npm_*` | tester |
+| 依存関係 | `local-command/{maven,gradle,dotnet,npm}_dependencies` | tester |
 | ファイル | `local-command/file_info` | splitter, investigator |
 | 構造化ファイル | `local-command/{json,xml,yaml,toml,ini}_*` | developer, tester, investigator, planner, reviewer, documenter, splitter |
+| ウィンドウ操作 | `local-command/window_*` | developer, tester |
 
 ## 構造化ファイル操作ツール
 
@@ -86,13 +89,15 @@ description: "MCP（local-command）ツールの使用ガイド。local-command 
 | `git_fetch` | リモート取得 | `remote?` |
 | `git_pull` | リモート取り込み | `remote?`, `branch?` |
 
-## 管理領域書き込みツール
+## 管理領域ツール
 
 ### `.copilot-docs` / `.copilot-work` 専用
 
 | ツール | 用途 | 主要パラメータ |
 |---|---|---|
+| `copilot_docs_read` | `.copilot-docs/` 配下のファイル読み込み | `path` |
 | `copilot_docs_write` | `.copilot-docs/` 配下のファイル作成・上書き | `path`, `content` |
+| `copilot_work_read` | `.copilot-work/` 配下のファイル読み込み | `path` |
 | `copilot_work_write` | `.copilot-work/` 配下のファイル作成・上書き | `path`, `content` |
 
 ## Markdown 変換ツール
@@ -137,7 +142,27 @@ description: "MCP（local-command）ツールの使用ガイド。local-command 
 | `dotnet_clean` | クリーン | `project?` |
 | `dotnet_restore` | パッケージ復元 | `project?` |
 
+### npm
+
+| ツール | 用途 | 主要パラメータ |
+|---|---|---|
+| `npm_install` | npm install を実行 | `args?` |
+| `npm_build` | npm run build（またはカスタムスクリプト）を実行 | `script?` |
+| `npm_test` | npm test を実行 | `args?` |
+| `npm_run` | 任意の npm スクリプトを実行 | `script` |
+| `npm_dependencies` | npm の依存関係ツリーを JSON で取得 | `depth?` |
+
+### 依存関係取得
+
+| ツール | 用途 | 主要パラメータ |
+|---|---|---|
+| `maven_dependencies` | Maven の依存関係ツリーを取得 | `module?` |
+| `gradle_dependencies` | Gradle の依存関係ツリーを取得 | `module?`, `configuration?` |
+| `dotnet_dependencies` | dotnet のパッケージ一覧を取得 | `project?` |
+
 ## レスポンス形式
+
+### 汎用ツール
 
 全ツール共通:
 
@@ -146,6 +171,49 @@ description: "MCP（local-command）ツールの使用ガイド。local-command 
 - **出力なし**: `(出力なし)` を返却
 - **タイムアウト**: `[タイムアウトによりプロセスを終了しました]` メッセージ付き
 - **出力超過**: `[出力が上限を超えたため切り詰めました]` メッセージ付き
+
+### ビルド/テストツール（構造化 BuildResult）
+
+全ビルドツール（`maven_*`, `gradle_*`, `java_*`, `dotnet_*`, `npm_*`）は構造化 JSON（BuildResult 形式）で結果を返却する。
+
+BuildResult の主要フィールド:
+
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `success` | `boolean` | ビルド成功/失敗 |
+| `exitCode` | `number \| null` | 終了コード |
+| `errors` | `Array<{ file?, line?, column?, severity, message }>` | パース済みエラー |
+| `testSummary` | `{ testsRun, testsPassed, testsFailed, testsSkipped }?` | テスト結果 |
+| `rawOutput` | `string` | 生出力 |
+
+## ウィンドウ操作ツール（Windows 限定）
+
+起動済みウィンドウに対してスクリーンショット取得・クリック・キー入力を行う。
+操作は指定ウィンドウのクライアント領域内に制限され、範囲外操作はエラーとなる。
+
+| ツール | 用途 | 主要パラメータ |
+|---|---|---|
+| `window_find` | タイトル/プロセス名でウィンドウ検索 | `titlePattern`, `processName?` |
+| `window_list` | 表示中ウィンドウ一覧取得 | — |
+| `window_info` | ウィンドウ詳細情報取得 | `windowId` |
+| `window_click` | ウィンドウ内クリック | `windowId`, `x`, `y`, `button?`, `doubleClick?` |
+| `window_type` | テキスト入力 | `windowId`, `text` |
+| `window_key` | キー入力（修飾キー対応） | `windowId`, `key`, `modifiers?` |
+| `window_screenshot` | スクリーンショット取得 | `windowId`, `outputPath?` |
+
+### 使い方の流れ
+
+1. `window_find` または `window_list` でウィンドウを特定し `windowId`（HWND）を取得
+2. `window_info` でサイズ・位置を確認
+3. `window_screenshot` で現在の画面を取得
+4. `window_click` / `window_type` / `window_key` で操作
+5. 再度 `window_screenshot` で結果を確認
+
+### 注意事項
+
+- Windows 環境でのみ利用可能
+- 座標はクライアント領域の左上を原点 (0,0) とする
+- `window_screenshot` で `outputPath` を省略すると base64 画像として返却される
 
 ## 使用ルール
 

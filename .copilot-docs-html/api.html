@@ -134,6 +134,12 @@
         color: #f8f1e4;
       }
 
+      article pre.mermaid {
+        background: transparent;
+        color: var(--ink);
+        text-align: center;
+      }
+
       article code {
         font-family: "Cascadia Code", Consolas, monospace;
       }
@@ -187,11 +193,12 @@
       </section>
         <article>
           <h1>MCP ツール一覧・仕様</h1>
-<p>現在の MCP サーバーは全 39 ツールを提供し、git 調査、ビルド・検証、Markdown の HTML 化、管理領域への限定書き込み、構造化データファイルの読み書きを扱う。</p>
+<p>現在の MCP サーバーは全 56 ツールを提供し、git 調査、ビルド・検証、Markdown の HTML 化、管理領域への限定操作、構造化データファイルの読み書き、ウィンドウ操作を扱う。</p>
 <h2>この資料で分かること</h2>
 <ul>
 <li>全ツールのカテゴリと責務</li>
 <li>各ツールの主要パラメータと内部動作</li>
+<li>レスポンス形式（汎用テキスト / 構造化 BuildResult / 画像）</li>
 </ul>
 <h2>関連資料</h2>
 <ul>
@@ -214,8 +221,8 @@
 <td><code>.copilot-mcp/src/tools/git.ts</code></td>
 </tr>
 <tr>
-<td>管理領域書き込み</td>
-<td>2</td>
+<td>管理領域操作</td>
+<td>4</td>
 <td><code>.copilot-mcp/src/tools/workspace.ts</code></td>
 </tr>
 <tr>
@@ -225,12 +232,12 @@
 </tr>
 <tr>
 <td>Maven</td>
-<td>4</td>
+<td>5</td>
 <td><code>.copilot-mcp/src/tools/maven.ts</code></td>
 </tr>
 <tr>
 <td>Gradle</td>
-<td>3</td>
+<td>4</td>
 <td><code>.copilot-mcp/src/tools/gradle.ts</code></td>
 </tr>
 <tr>
@@ -240,8 +247,18 @@
 </tr>
 <tr>
 <td>dotnet</td>
-<td>5</td>
+<td>6</td>
 <td><code>.copilot-mcp/src/tools/dotnet.ts</code></td>
+</tr>
+<tr>
+<td>npm</td>
+<td>5</td>
+<td><code>.copilot-mcp/src/tools/npm.ts</code></td>
+</tr>
+<tr>
+<td>ウィンドウ操作</td>
+<td>7</td>
+<td><code>.copilot-mcp/src/tools/window.ts</code>, <code>.copilot-mcp/src/tools/window-screenshot.ts</code></td>
 </tr>
 <tr>
 <td>ファイルユーティリティ</td>
@@ -256,12 +273,70 @@
 </tbody>
 </table>
 <h2>共通仕様</h2>
+<h3>汎用ツールのレスポンス形式</h3>
 <ul>
 <li>レスポンス形式: <code>{ content: [{ type: &quot;text&quot;, text: string }], isError?: boolean }</code></li>
 <li>出力内容: stdout をそのまま返却し、stderr は <code>[stderr]</code> プレフィックス付きで追記する</li>
 <li>出力なし: <code>(出力なし)</code> を返却する</li>
 <li>エラー判定: 終了コードが 0 以外、またはツール内部でバリデーションに失敗した場合に <code>isError: true</code> を返す</li>
+<li>タイムアウト: <code>[タイムアウトによりプロセスを終了しました]</code> メッセージ付き</li>
+<li>出力超過: <code>[出力が上限を超えたため切り詰めました]</code> メッセージ付き</li>
 <li>作業ディレクトリ: 全ツール共通の必須パラメータ <code>workingDirectory</code> を使う。複数フォルダワークスペースでは共有制御ルートを指定する</li>
+</ul>
+<h3>ビルド/テストツールのレスポンス形式（構造化 BuildResult）</h3>
+<p>全ビルドツール（<code>maven_*</code>, <code>gradle_*</code>, <code>java_*</code>, <code>dotnet_*</code>, <code>npm_*</code>）は構造化 JSON（BuildResult 形式）で結果を返却する。</p>
+<table>
+<thead>
+<tr>
+<th>フィールド</th>
+<th>型</th>
+<th>説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>success</code></td>
+<td><code>boolean</code></td>
+<td>ビルド成功/失敗</td>
+</tr>
+<tr>
+<td><code>exitCode</code></td>
+<td><code>number | null</code></td>
+<td>終了コード</td>
+</tr>
+<tr>
+<td><code>errors</code></td>
+<td><code>Array&lt;{ file?, line?, column?, severity, message }&gt;</code></td>
+<td>パース済みエラー</td>
+</tr>
+<tr>
+<td><code>testSummary</code></td>
+<td><code>{ testsRun, testsPassed, testsFailed, testsSkipped }?</code></td>
+<td>テスト結果（テスト実行ツールのみ）</td>
+</tr>
+<tr>
+<td><code>rawOutput</code></td>
+<td><code>string</code></td>
+<td>生出力（stdout + stderr）</td>
+</tr>
+<tr>
+<td><code>truncated</code></td>
+<td><code>boolean</code></td>
+<td>出力が上限を超えて切り詰められた場合 <code>true</code></td>
+</tr>
+<tr>
+<td><code>timedOut</code></td>
+<td><code>boolean</code></td>
+<td>タイムアウトで終了した場合 <code>true</code></td>
+</tr>
+</tbody>
+</table>
+<p>エラーパースは <code>.copilot-mcp/src/tools/parsers.ts</code> の各パーサーが担当する。</p>
+<h3>画像レスポンス</h3>
+<p><code>window_screenshot</code> は <code>outputPath</code> 省略時に画像を直接返却する。</p>
+<ul>
+<li>レスポンス形式: <code>{ content: [{ type: &quot;image&quot;, data: string, mimeType: &quot;image/png&quot; }] }</code></li>
+<li><code>data</code> は base64 エンコードされた PNG 画像</li>
 </ul>
 <h2>Git ツール</h2>
 <table>
@@ -330,7 +405,7 @@
 </tr>
 </tbody>
 </table>
-<h2>管理領域書き込みツール</h2>
+<h2>管理領域ツール</h2>
 <table>
 <thead>
 <tr>
@@ -342,10 +417,22 @@
 </thead>
 <tbody>
 <tr>
+<td><code>copilot_docs_read</code></td>
+<td><code>.copilot-docs/</code> 配下のファイルを読み込む</td>
+<td><code>path</code></td>
+<td><code>readFile</code> / <code>.copilot-docs/</code> 外のパスは拒否</td>
+</tr>
+<tr>
 <td><code>copilot_docs_write</code></td>
 <td><code>.copilot-docs/</code> 配下のファイルを作成・上書き</td>
 <td><code>path</code>, <code>content</code></td>
 <td><code>writeFile</code> / <code>.copilot-docs/</code> 外のパスは拒否</td>
+</tr>
+<tr>
+<td><code>copilot_work_read</code></td>
+<td><code>.copilot-work/</code> 配下のファイルを読み込む</td>
+<td><code>path</code></td>
+<td><code>readFile</code> / <code>.copilot-work/</code> 外のパスは拒否</td>
 </tr>
 <tr>
 <td><code>copilot_work_write</code></td>
@@ -370,7 +457,7 @@
 <td><code>md2html</code></td>
 <td>Markdown ファイルまたはディレクトリを検索 UI 付き HTML に変換</td>
 <td><code>sourcePath</code>, <code>outputPath?</code>, <code>includeSearch?</code></td>
-<td><code>markdown-it</code> で HTML 化し、Markdown 間リンクの <code>.md</code> を <code>.html</code> に変換しつつ、既存 HTML を上書き・不要分削除して再生成する</td>
+<td><code>markdown-it</code> で HTML 化し、Markdown 間リンクの <code>.md</code> を <code>.html</code> に変換しつつ、既存 HTML を上書き・不要分削除して再生成する。Mermaid 図は CDN スクリプトによりクライアントサイドで描画される</td>
 </tr>
 </tbody>
 </table>
@@ -409,6 +496,12 @@
 <td>共通パラメータのみ</td>
 <td><code>mvn clean</code></td>
 </tr>
+<tr>
+<td><code>maven_dependencies</code></td>
+<td>依存関係ツリーを取得</td>
+<td><code>module?</code></td>
+<td><code>mvn dependency:tree [-pl ...]</code></td>
+</tr>
 </tbody>
 </table>
 <h2>Gradle ツール</h2>
@@ -439,6 +532,12 @@
 <td>Gradle クリーンを実行</td>
 <td>共通パラメータのみ</td>
 <td><code>./gradlew clean</code>（Windows: <code>gradlew.bat</code>）</td>
+</tr>
+<tr>
+<td><code>gradle_dependencies</code></td>
+<td>依存関係ツリーを取得</td>
+<td><code>module?</code>, <code>configuration?</code></td>
+<td><code>./gradlew dependencies [:module:dependencies] [--configuration ...]</code>（Windows: <code>gradlew.bat</code>）</td>
 </tr>
 </tbody>
 </table>
@@ -508,8 +607,121 @@
 <td><code>project?</code></td>
 <td><code>dotnet restore [project]</code></td>
 </tr>
+<tr>
+<td><code>dotnet_dependencies</code></td>
+<td>パッケージ一覧を取得</td>
+<td><code>project?</code></td>
+<td><code>dotnet list [project] package</code></td>
+</tr>
 </tbody>
 </table>
+<h2>npm ツール</h2>
+<table>
+<thead>
+<tr>
+<th>ツール</th>
+<th>目的</th>
+<th>主要パラメータ</th>
+<th>内部コマンド</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>npm_install</code></td>
+<td>npm install を実行</td>
+<td><code>args?</code></td>
+<td><code>npm install [args]</code>（Windows: <code>npm.cmd</code>）</td>
+</tr>
+<tr>
+<td><code>npm_build</code></td>
+<td>npm run build（またはカスタムスクリプト）を実行</td>
+<td><code>script?</code></td>
+<td><code>npm run build</code> または <code>npm run &lt;script&gt;</code>（Windows: <code>npm.cmd</code>）</td>
+</tr>
+<tr>
+<td><code>npm_test</code></td>
+<td>npm test を実行</td>
+<td><code>args?</code></td>
+<td><code>npm test [-- args]</code>（Windows: <code>npm.cmd</code>）</td>
+</tr>
+<tr>
+<td><code>npm_run</code></td>
+<td>任意の npm スクリプトを実行</td>
+<td><code>script</code></td>
+<td><code>npm run &lt;script&gt;</code>（Windows: <code>npm.cmd</code>）</td>
+</tr>
+<tr>
+<td><code>npm_dependencies</code></td>
+<td>依存関係ツリーを JSON で取得</td>
+<td><code>depth?</code></td>
+<td><code>npm ls --json [--depth N]</code>（Windows: <code>npm.cmd</code>）</td>
+</tr>
+</tbody>
+</table>
+<h2>ウィンドウ操作ツール（Windows 限定）</h2>
+<p>起動済みウィンドウに対してスクリーンショット取得・クリック・キー入力を行う。操作は指定ウィンドウのクライアント領域内に制限され、範囲外操作はエラーとなる。Windows 環境でのみ利用可能（非 Windows 環境ではツール自体がロードされない）。</p>
+<table>
+<thead>
+<tr>
+<th>ツール</th>
+<th>目的</th>
+<th>主要パラメータ</th>
+<th>内部動作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>window_find</code></td>
+<td>タイトル/プロセス名でウィンドウ検索</td>
+<td><code>titlePattern</code>, <code>processName?</code></td>
+<td><code>findWindowsByTitle</code> でタイトル部分一致（大文字小文字無視）検索、processName でフィルタ</td>
+</tr>
+<tr>
+<td><code>window_list</code></td>
+<td>表示中ウィンドウ一覧取得</td>
+<td>共通パラメータのみ</td>
+<td><code>enumWindows</code> で全ウィンドウを列挙し、可視ウィンドウのみ返却</td>
+</tr>
+<tr>
+<td><code>window_info</code></td>
+<td>ウィンドウ詳細情報取得</td>
+<td><code>windowId</code></td>
+<td>矩形、クライアント領域、サイズ、可視状態を返却</td>
+</tr>
+<tr>
+<td><code>window_click</code></td>
+<td>ウィンドウ内クリック</td>
+<td><code>windowId</code>, <code>x</code>, <code>y</code>, <code>button?</code>, <code>doubleClick?</code></td>
+<td><code>PostMessageW</code> で WM_xBUTTONDOWN/UP を送信。座標はクライアント領域左上 (0,0) 基準</td>
+</tr>
+<tr>
+<td><code>window_type</code></td>
+<td>テキスト入力</td>
+<td><code>windowId</code>, <code>text</code></td>
+<td>1文字ずつ <code>WM_CHAR</code> で送信</td>
+</tr>
+<tr>
+<td><code>window_key</code></td>
+<td>キー入力（修飾キー対応）</td>
+<td><code>windowId</code>, <code>key</code>, <code>modifiers?</code></td>
+<td><code>WM_KEYDOWN</code>/<code>WM_KEYUP</code> で送信。Ctrl/Alt/Shift 修飾キー対応。拡張キーフラグ自動設定</td>
+</tr>
+<tr>
+<td><code>window_screenshot</code></td>
+<td>スクリーンショット取得</td>
+<td><code>windowId</code>, <code>outputPath?</code></td>
+<td><code>PrintWindow</code>（<code>BitBlt</code> フォールバック）でキャプチャし、PNG 変換。<code>outputPath</code> 省略時は base64 画像として返却</td>
+</tr>
+</tbody>
+</table>
+<h3>使い方の流れ</h3>
+<ol>
+<li><code>window_find</code> または <code>window_list</code> でウィンドウを特定し <code>windowId</code>（HWND）を取得</li>
+<li><code>window_info</code> でサイズ・位置を確認</li>
+<li><code>window_screenshot</code> で現在の画面を取得</li>
+<li><code>window_click</code> / <code>window_type</code> / <code>window_key</code> で操作</li>
+<li>再度 <code>window_screenshot</code> で結果を確認</li>
+</ol>
 <h2>ファイルユーティリティツール</h2>
 <table>
 <thead>
@@ -688,5 +900,9 @@
           });
         }
       </script>
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({ startOnLoad: true });
+    </script>
   </body>
 </html>

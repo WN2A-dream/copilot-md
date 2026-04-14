@@ -48,6 +48,26 @@ describe("dotnetTools", () => {
         "dotnet", ["test", "MyProject.Tests"], "/test", 5000, 10000,
       );
     });
+
+    it("テスト結果を構造化レスポンスで返す", async () => {
+      mockExecuteCommand.mockResolvedValue({
+        exitCode: 0,
+        stdout: "Total tests: 10\nPassed: 8\nFailed: 1\nSkipped: 1",
+        stderr: "",
+        truncated: false,
+        timedOut: false,
+      });
+      const tool = findTool("dotnet_test");
+      const response = await tool.handler({ workingDirectory: "/test" }, mockConfig);
+      const parsed = JSON.parse(response.content[0].text);
+      expect(parsed.success).toBe(true);
+      expect(parsed.testSummary).toEqual({
+        testsRun: 10,
+        testsPassed: 8,
+        testsFailed: 1,
+        testsSkipped: 1,
+      });
+    });
   });
 
   describe("dotnet_build", () => {
@@ -57,6 +77,23 @@ describe("dotnetTools", () => {
       expect(mockExecuteCommand).toHaveBeenCalledWith(
         "dotnet", ["build"], "/test", 5000, 10000,
       );
+    });
+
+    it("ビルドエラーを構造化レスポンスで返す", async () => {
+      mockExecuteCommand.mockResolvedValue({
+        exitCode: 1,
+        stdout: "Program.cs(10,5): error CS1002: ; expected",
+        stderr: "",
+        truncated: false,
+        timedOut: false,
+      });
+      const tool = findTool("dotnet_build");
+      const response = await tool.handler({ workingDirectory: "/test" }, mockConfig);
+      const parsed = JSON.parse(response.content[0].text);
+      expect(parsed.success).toBe(false);
+      expect(parsed.errors.length).toBeGreaterThan(0);
+      expect(parsed.errors[0].file).toBe("Program.cs");
+      expect(response.isError).toBe(true);
     });
   });
 
@@ -86,6 +123,14 @@ describe("dotnetTools", () => {
         "dotnet", ["clean"], "/test", 5000, 10000,
       );
     });
+
+    it("構造化レスポンスを返す", async () => {
+      const tool = findTool("dotnet_clean");
+      const response = await tool.handler({ workingDirectory: "/test" }, mockConfig);
+      const parsed = JSON.parse(response.content[0].text);
+      expect(parsed.success).toBe(true);
+      expect(parsed.errors).toEqual([]);
+    });
   });
 
   describe("dotnet_restore", () => {
@@ -94,6 +139,24 @@ describe("dotnetTools", () => {
       await tool.handler({ workingDirectory: "/test" }, mockConfig);
       expect(mockExecuteCommand).toHaveBeenCalledWith(
         "dotnet", ["restore"], "/test", 5000, 10000,
+      );
+    });
+  });
+
+  describe("dotnet_dependencies", () => {
+    it("基本的な依存パッケージ一覧表示", async () => {
+      const tool = findTool("dotnet_dependencies");
+      await tool.handler({ workingDirectory: "/test" }, mockConfig);
+      expect(mockExecuteCommand).toHaveBeenCalledWith(
+        "dotnet", ["list", "package"], "/test", 5000, 10000,
+      );
+    });
+
+    it("プロジェクト指定で実行", async () => {
+      const tool = findTool("dotnet_dependencies");
+      await tool.handler({ workingDirectory: "/test", project: "MyApp.csproj" }, mockConfig);
+      expect(mockExecuteCommand).toHaveBeenCalledWith(
+        "dotnet", ["list", "MyApp.csproj", "package"], "/test", 5000, 10000,
       );
     });
   });

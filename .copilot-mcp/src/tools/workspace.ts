@@ -1,7 +1,9 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, normalize, resolve, sep } from "node:path";
 import { z } from "zod";
 import type { Config } from "../config.js";
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 const workingDirectorySchema = z.string().describe("コマンドを実行するワーキングディレクトリの絶対パス");
 
@@ -9,6 +11,11 @@ const scopedWriteSchema = z.object({
   workingDirectory: workingDirectorySchema,
   path: z.string().describe("対象ディレクトリ配下の相対ファイルパス"),
   content: z.string().describe("書き込むテキスト内容"),
+});
+
+const scopedReadSchema = z.object({
+  workingDirectory: workingDirectorySchema,
+  path: z.string().describe("対象ディレクトリ配下の相対ファイルパス"),
 });
 
 function resolveScopedPath(workingDirectory: string, scopeDirectory: string, relativePath: string): string {
@@ -49,7 +56,46 @@ function createScopedWriteTool(name: string, scopeDirectory: string, label: stri
   };
 }
 
+function createScopedReadTool(name: string, scopeDirectory: string, label: string) {
+  return {
+    name,
+    description: `${label} 配下のファイルを読み込む`,
+    inputSchema: scopedReadSchema,
+    handler: async (args: unknown, _config: Config) => {
+      const { workingDirectory, path } = scopedReadSchema.parse(args);
+
+      try {
+        const targetPath = resolveScopedPath(workingDirectory, scopeDirectory, path);
+
+        const stats = await stat(targetPath);
+        if (stats.size > MAX_FILE_SIZE) {
+          throw new Error(`ファイルサイズが上限（${MAX_FILE_SIZE / 1024 / 1024}MB）を超えています`);
+        }
+
+        let content = await readFile(targetPath, "utf-8");
+        // UTF-8 BOM を除去
+        if (content.charCodeAt(0) === 0xfeff) {
+          content = content.slice(1);
+        }
+
+        return {
+          content: [{ type: "text" as const, text: content }],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        const isNotFound = err instanceof Error && "code" in err && (err as NodeJS.ErrnoException).code === "ENOENT";
+        return {
+          content: [{ type: "text" as const, text: isNotFound ? `ファイルが見つかりません: ${scopeDirectory}/${path}` : `エラー: ${message}` }],
+          isError: true,
+        };
+      }
+    },
+  };
+}
+
 export const workspaceTools = [
   createScopedWriteTool("copilot_docs_write", ".copilot-docs", ".copilot-docs"),
   createScopedWriteTool("copilot_work_write", ".copilot-work", ".copilot-work"),
+  createScopedReadTool("copilot_docs_read", ".copilot-docs", ".copilot-docs"),
+  createScopedReadTool("copilot_work_read", ".copilot-work", ".copilot-work"),
 ];

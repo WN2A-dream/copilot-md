@@ -134,6 +134,12 @@
         color: #f8f1e4;
       }
 
+      article pre.mermaid {
+        background: transparent;
+        color: var(--ink);
+        text-align: center;
+      }
+
       article code {
         font-family: "Cascadia Code", Consolas, monospace;
       }
@@ -259,7 +265,7 @@
 </table>
 <h2>エージェント詳細</h2>
 <h3>orchestrator</h3>
-<p>タスクの受付からサブエージェントの呼び出し、完了判定までを管理する。</p>
+<p>タスクの受付からサブエージェントの呼び出し、完了判定までを管理する。<code>.copilot-docs/</code> のドキュメントと <code>.copilot-work/{task-id}/</code> 内の管理ファイルを参照してタスク分類・分割の精度を高める。</p>
 <table>
 <thead>
 <tr>
@@ -274,7 +280,7 @@
 </tr>
 <tr>
 <td>使用ツール</td>
-<td>askQuestions, agent, todo</td>
+<td>askQuestions, agent, todo, copilot_docs_read, copilot_work_read</td>
 </tr>
 <tr>
 <td>入力</td>
@@ -342,7 +348,7 @@
 </tr>
 <tr>
 <td>使用ツール</td>
-<td>askQuestions, read, search, copilot_work_write</td>
+<td>askQuestions, read, search, copilot_work_write, copilot_work_read</td>
 </tr>
 <tr>
 <td>入力</td>
@@ -380,7 +386,7 @@
 </tr>
 <tr>
 <td>使用ツール</td>
-<td>read, search, file_info, git_status, git_log, git_show, git_diff, copilot_work_write, json_read, xml_read, yaml_read, toml_read, ini_read</td>
+<td>read, search, file_info, git_status, git_log, git_show, git_diff, copilot_work_write, copilot_docs_read, copilot_work_read, json_read, xml_read, yaml_read, toml_read, ini_read</td>
 </tr>
 <tr>
 <td>入力</td>
@@ -413,7 +419,7 @@
 </tr>
 <tr>
 <td>使用ツール</td>
-<td>read, search, copilot_work_write, json_read, xml_read, yaml_read, toml_read, ini_read</td>
+<td>read, search, copilot_work_write, copilot_docs_read, copilot_work_read, json_read, xml_read, yaml_read, toml_read, ini_read</td>
 </tr>
 <tr>
 <td>入力</td>
@@ -446,7 +452,7 @@
 </tr>
 <tr>
 <td>使用ツール</td>
-<td>read, edit, search, copilot_work_write, json_read, json_write, json_get, json_set, xml_read, xml_write, yaml_read, yaml_write, toml_read, toml_write, ini_read, ini_write</td>
+<td>read, edit, search, copilot_work_write, copilot_docs_read, copilot_work_read, json_read, json_write, json_get, json_set, xml_read, xml_write, yaml_read, yaml_write, toml_read, toml_write, ini_read, ini_write, window_*</td>
 </tr>
 <tr>
 <td>入力</td>
@@ -463,7 +469,7 @@
 <li>ユーザが plan に ok を返したとき</li>
 </ul>
 <h3>tester</h3>
-<p>テストを実行し、失敗時は修正を行う。</p>
+<p>テストを実行し、失敗時は修正を行う。BuildResult 構造化レスポンスの <code>errors</code>、<code>testSummary</code>、<code>rawOutput</code> を活用して効率的にビルド→修正ループを回す。</p>
 <table>
 <thead>
 <tr>
@@ -478,7 +484,7 @@
 </tr>
 <tr>
 <td>使用ツール</td>
-<td>read, edit, search, copilot_work_write, maven_<em>, gradle_</em>, java_<em>, dotnet_</em>, json_read, json_write, xml_read, xml_write, yaml_read, yaml_write</td>
+<td>read, edit, search, copilot_work_write, copilot_work_read, maven_<em>, gradle_</em>, java_<em>, dotnet_</em>, npm_<em>, maven_dependencies, gradle_dependencies, dotnet_dependencies, npm_dependencies, json_read, json_write, xml_read, xml_write, yaml_read, yaml_write, window_</em></td>
 </tr>
 <tr>
 <td>入力</td>
@@ -490,7 +496,7 @@
 </tr>
 <tr>
 <td>対応フレームワーク</td>
-<td>Maven, Gradle, Java（ビルドツールなし）, dotnet</td>
+<td>Maven, Gradle, Java（ビルドツールなし）, dotnet, Node.js (npm)</td>
 </tr>
 </tbody>
 </table>
@@ -514,7 +520,7 @@
 </tr>
 <tr>
 <td>使用ツール</td>
-<td>read, search, copilot_work_write, json_read, xml_read, yaml_read, toml_read, ini_read</td>
+<td>read, search, copilot_work_write, copilot_docs_read, copilot_work_read, json_read, xml_read, yaml_read, toml_read, ini_read</td>
 </tr>
 <tr>
 <td>入力</td>
@@ -546,7 +552,7 @@
 </tr>
 <tr>
 <td>使用ツール</td>
-<td>read, search, copilot_docs_write, md2html, git_status, git_diff, git_log, json_read, yaml_read, toml_read</td>
+<td>read, search, copilot_docs_read, copilot_docs_write, copilot_work_read, md2html, git_status, git_diff, git_log, json_read, yaml_read, toml_read</td>
 </tr>
 <tr>
 <td>入力</td>
@@ -613,7 +619,7 @@
 <ul>
 <li>全ツールに共通する <code>workingDirectory</code> パラメータの指定方法</li>
 <li>カテゴリ別のツール一覧と使用エージェント</li>
-<li>レスポンス形式とエラーハンドリング</li>
+<li>レスポンス形式（汎用テキスト / 構造化 BuildResult）とエラーハンドリング</li>
 </ul>
 <h4><a href="http://copilot-docs.instructions.md">copilot-docs.instructions.md</a></h4>
 <p><code>.copilot-docs/</code> 配下のドキュメント構成ルール。</p>
@@ -696,7 +702,7 @@
 </ul>
 <h2>開発フロー</h2>
 <p>通常の開発フローは次のループで進む。</p>
-<pre><code class="language-mermaid">flowchart TD
+<pre class="mermaid">flowchart TD
     A[タスク受付] --&gt; B{タスク種別判定}
     B --&gt;|setup| C[investigator → planner → documenter]
     B --&gt;|design| D[interviewer → planner]
@@ -712,8 +718,7 @@
     K --&gt;|ok| L[documenter]
     K --&gt;|ng| G
     L --&gt; M[完了]
-</code></pre>
-<h2>設計・調査・セットアップフロー</h2>
+</pre><h2>設計・調査・セットアップフロー</h2>
 <table>
 <thead>
 <tr>
@@ -775,5 +780,9 @@
           });
         }
       </script>
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({ startOnLoad: true });
+    </script>
   </body>
 </html>

@@ -99,4 +99,27 @@ describe("md2htmlTools", () => {
 
     rmSync(tmpDir, { recursive: true, force: true });
   });
+
+  it("mermaid コードブロックを <pre class=\"mermaid\"> に変換し通常のコードブロックはそのまま出力する", async () => {
+    const tmpDir = join(tmpdir(), `mcp-test-md2html-${Date.now()}`);
+    const docsDir = join(tmpDir, ".copilot-docs");
+    mkdirSync(docsDir, { recursive: true });
+    writeFileSync(
+      join(docsDir, "diagram.md"),
+      "# ダイアグラム\n\n```mermaid\ngraph TD\n  A --> B\n```\n\n```js\nconsole.log('hello');\n```\n",
+      "utf-8",
+    );
+
+    const tool = findTool();
+    const result = await tool.handler({ workingDirectory: tmpDir, sourcePath: ".copilot-docs" }, mockConfig);
+
+    expect(result.isError).toBeUndefined();
+    const html = readFileSync(join(tmpDir, ".copilot-docs-html", "diagram.html"), "utf-8");
+    expect(html).toContain('<pre class="mermaid">');
+    expect(html).toContain("graph TD");
+    expect(html).toContain('<pre><code class="language-js">');
+    expect(html).toContain("mermaid.initialize");
+
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
 });

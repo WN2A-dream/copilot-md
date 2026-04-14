@@ -1,61 +1,77 @@
 import { describe, it, expect } from "vitest";
-import { formatResult } from "./format.js";
+import { formatBuildResult } from "./format.js";
+import type { BuildResult, CompileError } from "./format.js";
+import type { CommandResult } from "../executor.js";
 
-describe("formatResult", () => {
-  it("stdoutのみの場合", () => {
-    const result = formatResult({
-      exitCode: 0,
-      stdout: "output text",
-      stderr: "",
-    });
-    expect(result.content[0].text).toBe("output text");
+function makeCommandResult(partial: Partial<CommandResult> = {}): CommandResult {
+  return {
+    exitCode: 0,
+    stdout: "",
+    stderr: "",
+    truncated: false,
+    timedOut: false,
+    ...partial,
+  };
+}
+
+function parseBuildResult(response: { content: { type: "text"; text: string }[] }): BuildResult {
+  return JSON.parse(response.content[0].text);
+}
+
+describe("formatBuildResult", () => {
+  it("成功時はsuccess=trueでisErrorがundefined", () => {
+    const result = formatBuildResult(makeCommandResult({ exitCode: 0, stdout: "BUILD SUCCESS" }), []);
     expect(result.isError).toBeUndefined();
+    const parsed = parseBuildResult(result);
+    expect(parsed.success).toBe(true);
+    expect(parsed.exitCode).toBe(0);
+    expect(parsed.rawOutput).toBe("BUILD SUCCESS");
   });
 
-  it("stderrのみの場合", () => {
-    const result = formatResult({
-      exitCode: 1,
-      stdout: "",
-      stderr: "error text",
-    });
-    expect(result.content[0].text).toBe("[stderr]\nerror text");
+  it("失敗時はsuccess=falseでisError=true", () => {
+    const errors: CompileError[] = [{ file: "Main.java", line: 10, severity: "error", message: "cannot find symbol" }];
+    const result = formatBuildResult(makeCommandResult({ exitCode: 1, stderr: "compilation failed" }), errors);
     expect(result.isError).toBe(true);
+    const parsed = parseBuildResult(result);
+    expect(parsed.success).toBe(false);
+    expect(parsed.errors).toHaveLength(1);
+    expect(parsed.errors[0].file).toBe("Main.java");
   });
 
-  it("stdout + stderrの場合", () => {
-    const result = formatResult({
-      exitCode: 0,
-      stdout: "out",
-      stderr: "err",
-    });
-    expect(result.content[0].text).toBe("out\n[stderr]\nerr");
-    expect(result.isError).toBeUndefined();
+  it("truncatedフラグが伝搬する", () => {
+    const result = formatBuildResult(makeCommandResult({ truncated: true, stdout: "partial..." }), []);
+    const parsed = parseBuildResult(result);
+    expect(parsed.truncated).toBe(true);
   });
 
-  it("出力なしの場合", () => {
-    const result = formatResult({
-      exitCode: 0,
-      stdout: "",
-      stderr: "",
-    });
-    expect(result.content[0].text).toBe("(出力なし)");
+  it("timedOutフラグが伝搬する", () => {
+    const result = formatBuildResult(makeCommandResult({ exitCode: null, timedOut: true }), []);
+    const parsed = parseBuildResult(result);
+    expect(parsed.timedOut).toBe(true);
+    expect(parsed.exitCode).toBeNull();
   });
 
-  it("非ゼロ終了コードでisError=trueになる", () => {
-    const result = formatResult({
-      exitCode: 127,
-      stdout: "something",
-      stderr: "",
-    });
-    expect(result.isError).toBe(true);
+  it("testSummaryが含まれる", () => {
+    const summary = { testsRun: 10, testsPassed: 8, testsFailed: 1, testsSkipped: 1 };
+    const result = formatBuildResult(makeCommandResult({ stdout: "test output" }), [], summary);
+    const parsed = parseBuildResult(result);
+    expect(parsed.testSummary).toEqual(summary);
   });
 
-  it("exitCode=0ではisErrorがundefined", () => {
-    const result = formatResult({
-      exitCode: 0,
-      stdout: "ok",
-      stderr: "",
-    });
-    expect(result.isError).toBeUndefined();
+  it("testSummaryが未指定のときはundefined", () => {
+    const result = formatBuildResult(makeCommandResult(), []);
+    const parsed = parseBuildResult(result);
+    expect(parsed.testSummary).toBeUndefined();
+  });
+
+  it("stdout + stderrがrawOutputに結合される", () => {
+    const result = formatBuildResult(makeCommandResult({ stdout: "out", stderr: "err" }), []);
+    const parsed = parseBuildResult(result);
+    expect(parsed.rawOutput).toBe("out\nerr");
+  });
+
+  it("レスポンスがJSON文字列である", () => {
+    const result = formatBuildResult(makeCommandResult(), []);
+    expect(() => JSON.parse(result.content[0].text)).not.toThrow();
   });
 });

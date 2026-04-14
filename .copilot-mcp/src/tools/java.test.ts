@@ -23,6 +23,10 @@ function findTool(name: string) {
   return tool;
 }
 
+function parseBuildResult(result: { content: { text: string }[] }) {
+  return JSON.parse(result.content[0].text);
+}
+
 describe("javaTools", () => {
   beforeEach(() => {
     mockExecuteCommand.mockReset();
@@ -37,7 +41,7 @@ describe("javaTools", () => {
       writeFileSync(join(srcDir, "Main.java"), "class Main {}\n");
 
       const tool = findTool("java_compile");
-      await tool.handler({ workingDirectory: tmpDir, sourceDirectory: "src" }, mockConfig);
+      const result = await tool.handler({ workingDirectory: tmpDir, sourceDirectory: "src" }, mockConfig);
 
       const expectedOutputDirectory = join(tmpDir, ".copilot-work", "java-classes");
       expect(mockExecuteCommand).toHaveBeenCalledWith(
@@ -47,6 +51,11 @@ describe("javaTools", () => {
         5000,
         10000,
       );
+
+      const parsed = parseBuildResult(result);
+      expect(parsed.success).toBe(true);
+      expect(parsed.exitCode).toBe(0);
+      expect(parsed.errors).toEqual([]);
 
       rmSync(tmpDir, { recursive: true, force: true });
     });
@@ -64,6 +73,31 @@ describe("javaTools", () => {
 
       rmSync(tmpDir, { recursive: true, force: true });
     });
+
+    it("コンパイルエラーが構造化される", async () => {
+      const tmpDir = join(tmpdir(), `mcp-test-java-${Date.now()}`);
+      const srcDir = join(tmpDir, "src");
+      mkdirSync(srcDir, { recursive: true });
+      writeFileSync(join(srcDir, "Main.java"), "class Main {}\n");
+
+      mockExecuteCommand.mockResolvedValue({
+        exitCode: 1,
+        stdout: "",
+        stderr: "src/Main.java:5: error: ';' expected",
+        truncated: false,
+        timedOut: false,
+      });
+
+      const tool = findTool("java_compile");
+      const result = await tool.handler({ workingDirectory: tmpDir, sourceDirectory: "src" }, mockConfig);
+      const parsed = parseBuildResult(result);
+      expect(parsed.success).toBe(false);
+      expect(parsed.errors.length).toBeGreaterThan(0);
+      expect(parsed.errors[0].file).toBe("src/Main.java");
+      expect(parsed.errors[0].severity).toBe("error");
+
+      rmSync(tmpDir, { recursive: true, force: true });
+    });
   });
 
   describe("java_run", () => {
@@ -73,7 +107,7 @@ describe("javaTools", () => {
       const classesDir = join(tmpDir, "out");
       const classpathSeparator = process.platform === "win32" ? ";" : ":";
 
-      await tool.handler({
+      const result = await tool.handler({
         workingDirectory: tmpDir,
         compiledClassesDirectory: "out",
         classpath: "lib/example.jar",
@@ -88,6 +122,10 @@ describe("javaTools", () => {
         5000,
         10000,
       );
+
+      const parsed = parseBuildResult(result);
+      expect(parsed.success).toBe(true);
+      expect(parsed.errors).toEqual([]);
 
       rmSync(tmpDir, { recursive: true, force: true });
     });

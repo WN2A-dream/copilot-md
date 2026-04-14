@@ -3,7 +3,8 @@ import { normalize, resolve, sep } from "node:path";
 import { z } from "zod";
 import type { Config } from "../config.js";
 import { executeCommand } from "../executor.js";
-import { formatResult } from "./format.js";
+import { formatBuildResult } from "./format.js";
+import { parseJavacErrors } from "./parsers.js";
 
 const classpathSeparator = process.platform === "win32" ? ";" : ":";
 const defaultOutputDirectory = ".copilot-work/java-classes";
@@ -95,7 +96,7 @@ export const javaTools = [
       commandArgs.push(...sourceFiles);
 
       const result = await executeCommand("javac", commandArgs, workingDirectory, config.timeout, config.maxOutputSize);
-      return formatResult(result);
+      return formatBuildResult(result, parseJavacErrors(result.stderr));
     },
   },
   {
@@ -116,7 +117,7 @@ export const javaTools = [
       }
 
       const result = await executeCommand("java", commandArgs, workingDirectory, config.timeout, config.maxOutputSize);
-      return formatResult(result);
+      return formatBuildResult(result, []);
     },
   },
 ];

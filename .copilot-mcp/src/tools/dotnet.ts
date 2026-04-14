@@ -1,7 +1,8 @@
 import { z } from "zod";
 import type { Config } from "../config.js";
 import { executeCommand } from "../executor.js";
-import { formatResult } from "./format.js";
+import { formatBuildResult } from "./format.js";
+import { parseDotnetErrors, parseDotnetTestSummary } from "./parsers.js";
 
 const workingDirectorySchema = z.string().describe("コマンドを実行するワーキングディレクトリの絶対パス");
 
@@ -31,6 +32,11 @@ const dotnetRestoreSchema = z.object({
   project: z.string().optional().describe("対象プロジェクトパス"),
 });
 
+const dotnetDependenciesSchema = z.object({
+  workingDirectory: workingDirectorySchema,
+  project: z.string().optional().describe("対象プロジェクトパス"),
+});
+
 
 
 export const dotnetTools = [
@@ -44,7 +50,10 @@ export const dotnetTools = [
       if (project) cmdArgs.push(project);
       if (filter) cmdArgs.push("--filter", filter);
       const result = await executeCommand("dotnet", cmdArgs, workingDirectory, config.timeout, config.maxOutputSize);
-      return formatResult(result);
+      const combined = [result.stdout, result.stderr].filter(Boolean).join("\n");
+      const errors = parseDotnetErrors(combined);
+      const testSummary = parseDotnetTestSummary(combined);
+      return formatBuildResult(result, errors, testSummary);
     },
   },
   {
@@ -56,7 +65,8 @@ export const dotnetTools = [
       const cmdArgs: string[] = ["build"];
       if (project) cmdArgs.push(project);
       const result = await executeCommand("dotnet", cmdArgs, workingDirectory, config.timeout, config.maxOutputSize);
-      return formatResult(result);
+      const errors = parseDotnetErrors([result.stdout, result.stderr].filter(Boolean).join("\n"));
+      return formatBuildResult(result, errors);
     },
   },
   {
@@ -68,7 +78,8 @@ export const dotnetTools = [
       const cmdArgs: string[] = ["run"];
       if (project) cmdArgs.push("--project", project);
       const result = await executeCommand("dotnet", cmdArgs, workingDirectory, config.timeout, config.maxOutputSize);
-      return formatResult(result);
+      const errors = parseDotnetErrors([result.stdout, result.stderr].filter(Boolean).join("\n"));
+      return formatBuildResult(result, errors);
     },
   },
   {
@@ -80,7 +91,7 @@ export const dotnetTools = [
       const cmdArgs: string[] = ["clean"];
       if (project) cmdArgs.push(project);
       const result = await executeCommand("dotnet", cmdArgs, workingDirectory, config.timeout, config.maxOutputSize);
-      return formatResult(result);
+      return formatBuildResult(result, []);
     },
   },
   {
@@ -92,7 +103,20 @@ export const dotnetTools = [
       const cmdArgs: string[] = ["restore"];
       if (project) cmdArgs.push(project);
       const result = await executeCommand("dotnet", cmdArgs, workingDirectory, config.timeout, config.maxOutputSize);
-      return formatResult(result);
+      return formatBuildResult(result, []);
+    },
+  },
+  {
+    name: "dotnet_dependencies",
+    description: "dotnet で依存パッケージ一覧を表示する",
+    inputSchema: dotnetDependenciesSchema,
+    handler: async (args: unknown, config: Config) => {
+      const { workingDirectory, project } = dotnetDependenciesSchema.parse(args);
+      const cmdArgs: string[] = ["list"];
+      if (project) cmdArgs.push(project);
+      cmdArgs.push("package");
+      const result = await executeCommand("dotnet", cmdArgs, workingDirectory, config.timeout, config.maxOutputSize);
+      return formatBuildResult(result, []);
     },
   },
 ];

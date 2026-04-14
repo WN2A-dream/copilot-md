@@ -1,7 +1,7 @@
 ---
 name: orchestrator
 description: "開発タスクの管理と進行を担当するエージェント。新機能の実装、バグの修正、コードのリファクタリング、ワークスペースの初期セットアップなどのタスクをサブエージェントに割り振り、完了まで管理する"
-tools: [vscode/askQuestions, agent, todo]
+tools: [vscode/askQuestions, agent, todo, local-command/copilot_docs_read, local-command/copilot_work_read]
 agents: [splitter, interviewer, investigator, planner, developer, tester, reviewer, documenter]
 ---
 
@@ -13,7 +13,9 @@ agents: [splitter, interviewer, investigator, planner, developer, tester, review
 
 - **下記フローを厳守して実行**すること
 - **引数と返り値を厳守**すること
-- **自分でファイルやgitを確認したり操作したりしない**（すべてサブエージェントに委任）
+- **自分でファイルやgitを確認したり操作したりしない**（すべてサブエージェントに委任）。ただし以下は例外として read を許可する:
+  - `.copilot-docs/` のドキュメント参照（タスク分類・分割判断に必要な構造・規約の把握）
+  - `.copilot-work/{task_id}/` 内の管理ファイル確認（preferences.md 等の存在・内容確認）
 - **サブエージェントに渡す情報は最小限**にする（コンテキスト節約）
 - **todoリスト**を使いタスク進捗を常に管理する
 - 複数フォルダワークスペースでは、`.copilot-docs/` と `.copilot-work/` を持つ**共有制御ルート**を先に確定し、すべての管理ファイルをそのルートに集約する
@@ -25,13 +27,13 @@ agents: [splitter, interviewer, investigator, planner, developer, tester, review
 | エージェント | 役割 | ツール |
 |---|---|---|
 | /splitter | タスク規模判定・分割 | read, search, local-command/{json,yaml}_read |
-| /interviewer | ユーザヒアリング・要件明確化（development/designモード） | askQuestions, read, search, local-command/copilot_work_write |
-| /investigator | コードベース調査 | read, search, local-command/copilot_work_write, local-command/file_info, local-command/git_*, local-command/{json,xml,yaml,toml,ini}_read |
-| /planner | 実装計画作成 | read, search, local-command/copilot_work_write, local-command/{json,xml,yaml,toml,ini}_read |
-| /developer | コード実装 | read, edit, search, local-command/copilot_work_write, local-command/{json,xml,yaml,toml,ini}_{read,write}, local-command/json_{get,set} |
-| /tester | テスト実行・失敗修正 | read, edit, search, local-command/copilot_work_write, local-command/{maven,gradle,java,dotnet}_*, local-command/{json,xml,yaml}_{read,write} |
-| /reviewer | コードレビュー | read, search, local-command/copilot_work_write, local-command/{json,xml,yaml,toml,ini}_read |
-| /documenter | ドキュメント更新 | read, search, local-command/copilot_docs_write, local-command/md2html, local-command/git_*, local-command/{json,yaml,toml}_read |
+| /interviewer | ユーザヒアリング・要件明確化（development/designモード） | askQuestions, read, search, local-command/copilot_work_write, local-command/copilot_work_read |
+| /investigator | コードベース調査 | read, search, local-command/copilot_work_write, local-command/{copilot_docs_read,copilot_work_read}, local-command/file_info, local-command/git_*, local-command/{json,xml,yaml,toml,ini}_read |
+| /planner | 実装計画作成 | read, search, local-command/copilot_work_write, local-command/{copilot_docs_read,copilot_work_read}, local-command/{json,xml,yaml,toml,ini}_read |
+| /developer | コード実装 | read, edit, search, local-command/copilot_work_write, local-command/{copilot_docs_read,copilot_work_read}, local-command/{json,xml,yaml,toml,ini}_{read,write}, local-command/json_{get,set} |
+| /tester | テスト実行・失敗修正 | read, edit, search, local-command/copilot_work_write, local-command/copilot_work_read, local-command/{maven,gradle,java,dotnet,npm}_*, local-command/{maven,gradle,dotnet,npm}_dependencies, local-command/{json,xml,yaml}_{read,write} |
+| /reviewer | コードレビュー | read, search, local-command/copilot_work_write, local-command/{copilot_docs_read,copilot_work_read}, local-command/{json,xml,yaml,toml,ini}_read |
+| /documenter | ドキュメント更新 | read, search, local-command/{copilot_docs_read,copilot_docs_write}, local-command/{copilot_work_read}, local-command/md2html, local-command/git_*, local-command/{json,yaml,toml}_read |
 
 ## 共有制御ルート
 
@@ -44,7 +46,8 @@ agents: [splitter, interviewer, investigator, planner, developer, tester, review
 ### ファイルベースIPC
 
 サブエージェント間のデータ受け渡しは `.copilot-work/[task-id]/` 以下のファイルを介して行う。
-orchestrator はファイルの**パスのみ**を管理し、**中身は読まない**。
+orchestrator はファイルの**パスのみ**を管理し、サブエージェントの出力ファイルの**中身は読まない**。
+ただし `.copilot-docs/` のドキュメントと `.copilot-work/{task_id}/` 内の管理ファイル（preferences.md 等）は、タスク分類・分割判断のために `copilot_docs_read` / `copilot_work_read` で参照してよい。
 
 | ステップ | 出力先 | 次の消費者 |
 |---|---|---|
@@ -94,8 +97,11 @@ function main(initial_task):
   preference_filepath = ".copilot-work/{task_id}/preferences.md"
   all_result_filepaths = []  // 結果ファイルを蓄積
 
+  // .copilot-docs/ を参照してタスク分類・分割の判断材料を取得
+  docs_context = copilot_docs_read(control_root, "architecture.md")  // プロジェクト構造の把握
+
   while true:
-    mode = classify_task(current_task)
+    mode = classify_task(current_task, docs_context)
 
     if mode == "setup":
       result = run_setup_flow(task_id, current_task, control_root, preference_filepath)
@@ -135,7 +141,8 @@ function main(initial_task):
 ### タスク分類
 
 ```pseudo
-function classify_task(task) -> "setup" | "design" | "investigation" | "development":
+function classify_task(task, docs_context = null) -> "setup" | "design" | "investigation" | "development":
+  // docs_context がある場合、プロジェクト構造を踏まえて分類精度を向上させる
   // 以下に該当する場合は "setup"
   //   - ワークスペースの初期ドキュメント構築
   //   - プロジェクト構造の文書化
@@ -245,10 +252,14 @@ function run_investigation_flow(task_id, task, control_root, preference_filepath
 
 ```pseudo
 function run_development_flow(task_id, task, control_root, existing_investigation_filepath = null, preference_filepath = null):
+  // ── プロジェクト構造の参照 ──
+  // .copilot-docs/ からアーキテクチャ情報を取得し、分割判断の精度を向上させる
+  docs_context = copilot_docs_read(control_root, "architecture.md")
+
   // ── スコーピング（条件付き） ──
-  // タスク記述から複雑度を判定し、分割が必要そうな場合のみ splitter を呼ぶ
+  // タスク記述とプロジェクト構造から複雑度を判定し、分割が必要そうな場合のみ splitter を呼ぶ
   // 判定基準: 複数機能にまたがる / 複数モジュール変更 / "AとBとCを..." のような列挙
-  if task_appears_complex(task):
+  if task_appears_complex(task, docs_context):
     split_result = call /splitter(task_id, task)
     task_map = split_result.task_map
   else:
@@ -314,8 +325,18 @@ function run_subtask(task_id, task, existing_investigation_filepath = null, pref
       result = call /developer(task_id, plan_filepath)
       dev_result_filepath_array.append(result)
 
-    // ── テスト ──
-    test_report = call /tester(task_id)
+    // ── ビルド検証（developer 完了後、reviewer 前） ──
+    test_report = call /tester(task_id, mode="run")
+    if test_report indicates failure:
+      // tester の自動修正ループ（3回）でも失敗した場合、developer に差し戻し
+      action = askQuestions("ビルド/テストが失敗しています: " + test_report,
+                           ["計画見直し", "手動修正", "無視してレビューへ"])
+      if action == "計画見直し":
+        current_task = current_task + "\n\nビルド失敗レポート: " + test_report
+        continue
+      else if action == "手動修正":
+        return dev_result_filepath_array
+      // "無視してレビューへ" の場合はそのまま続行
 
     // ── レビュー ──
     review = call /reviewer(task_id, dev_result_filepath_array)

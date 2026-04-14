@@ -56,7 +56,7 @@ VS Code Copilot エージェント向けのローカルコマンド実行 MCP（
 | カテゴリ | ツール数 | 概要 |
 | --- | --- | --- |
 | Git | 9 | status, checkout, branch, show, log, diff, fetch, pull, check-ignore |
-| 管理領域書き込み | 2 | `.copilot-docs/` と `.copilot-work/` 専用の書き込み |
+| 管理領域操作 | 4 | `.copilot-docs/` と `.copilot-work/` 専用の読み書き |
 | Markdown | 1 | Markdown を検索 UI 付き HTML へ変換 |
 | Maven | 4 | test, verify, compile, clean |
 | Gradle | 3 | test, build, clean |

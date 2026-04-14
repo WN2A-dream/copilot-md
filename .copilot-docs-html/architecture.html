@@ -134,6 +134,12 @@
         color: #f8f1e4;
       }
 
+      article pre.mermaid {
+        background: transparent;
+        color: var(--ink);
+        text-align: center;
+      }
+
       article code {
         font-family: "Cascadia Code", Consolas, monospace;
       }
@@ -203,7 +209,7 @@
 <h2>エージェントアーキテクチャ</h2>
 <h3>全体構成</h3>
 <p>orchestrator を中心としたハブ＆スポーク構造で、サブエージェントを必要に応じて呼び出す。</p>
-<pre><code class="language-mermaid">graph TD
+<pre class="mermaid">graph TD
     User[ユーザ/IDE]
     Orch[orchestrator]
     Split[splitter]
@@ -224,8 +230,7 @@
     Orch --&gt; Test
     Orch --&gt; Rev
     Orch --&gt; Doc
-</code></pre>
-<h3>タスクモード</h3>
+</pre><h3>タスクモード</h3>
 <p>orchestrator はタスク種別に応じて4つのモードを使い分ける。</p>
 <table>
 <thead>
@@ -260,7 +265,7 @@
 </table>
 <h3>ファイルベース IPC</h3>
 <p>エージェント間のデータ受け渡しは <code>.copilot-work/[task-id]/</code> 以下のファイルを介して行う。プロンプトには <strong>タスク ID・タスク内容・入力ファイルパス</strong> のみを含め、調査結果や計画内容はファイル参照で渡す。</p>
-<pre><code class="language-mermaid">flowchart LR
+<pre class="mermaid">flowchart LR
     subgraph &quot;.copilot-work/[task-id]/&quot;
         H[hearing.md]
         P[preferences.md]
@@ -288,8 +293,7 @@
     D --&gt; reviewer
     T --&gt; reviewer
     R --&gt; planner
-</code></pre>
-<h3>コンテキスト節約戦略</h3>
+</pre><h3>コンテキスト節約戦略</h3>
 <table>
 <thead>
 <tr>
@@ -317,7 +321,7 @@
 </tbody>
 </table>
 <h3>エージェント間依存関係</h3>
-<pre><code class="language-mermaid">graph LR
+<pre class="mermaid">graph LR
     Inv[investigator] --&gt; Plan[planner]
     Plan --&gt; Dev[developer]
     Dev --&gt; Test[tester]
@@ -325,9 +329,8 @@
     Test --&gt; Rev
     Rev --&gt;|ng| Plan
     Rev --&gt;|ok| Doc[documenter]
-</code></pre>
-<h2>MCP サーバーアーキテクチャ</h2>
-<p>local-command MCP サーバーは、シェルコマンド実行・管理領域書き込み・Markdown 変換・構造化データファイル操作を構造化パラメータで提供する。</p>
+</pre><h2>MCP サーバーアーキテクチャ</h2>
+<p>local-command MCP サーバーは、シェルコマンド実行・管理領域書き込み・Markdown 変換・構造化データファイル操作・ウィンドウ操作を構造化パラメータで提供する。</p>
 <h3>技術スタック</h3>
 <table>
 <thead>
@@ -358,6 +361,16 @@
 <td><code>markdown-it</code></td>
 <td>HTML 変換を安定して実装できる</td>
 </tr>
+<tr>
+<td>FFI</td>
+<td><code>koffi</code></td>
+<td>JIT FFI で Win32 API を直接呼び出し（ネイティブコンパイル不要）</td>
+</tr>
+<tr>
+<td>画像処理</td>
+<td><code>pngjs</code></td>
+<td>BMP → PNG 変換（pure JS、軽量）</td>
+</tr>
 </tbody>
 </table>
 <h3>データフロー</h3>
@@ -367,10 +380,13 @@ MCP サーバー — .copilot-mcp/src/index.ts
   ↓ toolMap でルーティング
 各ツールモジュール — .copilot-mcp/src/tools/*.ts
   ├─ コマンド実行系 → .copilot-mcp/src/executor.ts
+  │    → formatBuildResult (BuildResult JSON) — ビルド/テストツール
+  │    → formatResult (テキスト) — git 等の汎用ツール
   ├─ 管理領域書き込み系 → Node.js fs/promises
-  ├─ Markdown 変換系 → markdown-it + Node.js fs/promises
-  └─ 構造化ファイル操作系 → fast-xml-parser, yaml, smol-toml, ini + Node.js fs/promises
-  ↓ MCP レスポンス
+  ├─ Markdown 変換系 → markdown-it (+ Mermaid CDN) + Node.js fs/promises
+  ├─ 構造化ファイル操作系 → fast-xml-parser, yaml, smol-toml, ini + Node.js fs/promises
+  └─ ウィンドウ操作系 → koffi (Win32 API) + pngjs
+  ↓ MCP レスポンス (TextContent | ImageContent)
 エージェント
 </code></pre>
 <h3>モジュール構成</h3>
@@ -387,9 +403,9 @@ MCP サーバー — .copilot-mcp/src/index.ts
 <tbody>
 <tr>
 <td><code>.copilot-mcp/src/index.ts</code></td>
-<td>ツール登録とルーティング</td>
+<td>ツール登録とルーティング。Windows 限定ツールは <code>process.platform</code> で条件付き動的 import</td>
 <td>MCP リクエスト</td>
-<td>MCP レスポンス</td>
+<td>MCP レスポンス (TextContent / ImageContent)</td>
 <td>MCP SDK, 全ツールモジュール</td>
 </tr>
 <tr>
@@ -408,9 +424,16 @@ MCP サーバー — .copilot-mcp/src/index.ts
 </tr>
 <tr>
 <td><code>.copilot-mcp/src/tools/format.ts</code></td>
-<td>実行結果を MCP 形式へ整形</td>
-<td><code>CommandResult</code></td>
+<td>実行結果を MCP 形式へ整形。汎用 <code>formatResult</code> と構造化 <code>formatBuildResult</code> を提供。<code>BuildResult</code>/<code>CompileError</code>/<code>TestSummary</code> 型を定義</td>
+<td><code>CommandResult</code>, パース済みエラー</td>
 <td>MCP レスポンス</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>.copilot-mcp/src/tools/parsers.ts</code></td>
+<td>全ビルドツール向けエラーパーサー・テスト結果パーサー。javac/Maven/Gradle/dotnet/npm の各出力形式に対応</td>
+<td>ビルド出力テキスト</td>
+<td><code>CompileError[]</code>, <code>TestSummary</code></td>
 <td>—</td>
 </tr>
 <tr>
@@ -422,31 +445,59 @@ MCP サーバー — .copilot-mcp/src/index.ts
 </tr>
 <tr>
 <td><code>.copilot-mcp/src/tools/maven.ts</code></td>
-<td>Maven ツール 4 個</td>
+<td>Maven ツール 5 個（dependencies 含む）</td>
 <td>構造化パラメータ</td>
 <td>mvn 引数</td>
-<td>executor, format</td>
+<td>executor, format, parsers</td>
 </tr>
 <tr>
 <td><code>.copilot-mcp/src/tools/gradle.ts</code></td>
-<td>Gradle ツール 3 個</td>
+<td>Gradle ツール 4 個（dependencies 含む）</td>
 <td>構造化パラメータ</td>
 <td>gradlew 引数</td>
-<td>executor, format</td>
+<td>executor, format, parsers</td>
 </tr>
 <tr>
 <td><code>.copilot-mcp/src/tools/java.ts</code></td>
 <td>build tool なし Java ツール 2 個</td>
 <td>構造化パラメータ</td>
 <td>javac/java 引数</td>
-<td>executor, format, fs/promises</td>
+<td>executor, format, parsers</td>
 </tr>
 <tr>
 <td><code>.copilot-mcp/src/tools/dotnet.ts</code></td>
-<td>dotnet ツール 5 個</td>
+<td>dotnet ツール 6 個（dependencies 含む）</td>
 <td>構造化パラメータ</td>
 <td>dotnet 引数</td>
-<td>executor, format</td>
+<td>executor, format, parsers</td>
+</tr>
+<tr>
+<td><code>.copilot-mcp/src/tools/npm.ts</code></td>
+<td>npm ツール 5 個（dependencies 含む）</td>
+<td>構造化パラメータ</td>
+<td>npm 引数</td>
+<td>executor, format, parsers</td>
+</tr>
+<tr>
+<td><code>.copilot-mcp/src/tools/win32.ts</code></td>
+<td>Win32 API バインディング層。user32/gdi32/dwmapi/kernel32 の 30+ 関数をバインド</td>
+<td>—</td>
+<td>API 関数群, ヘルパー関数</td>
+<td>koffi</td>
+</tr>
+<tr>
+<td><code>.copilot-mcp/src/tools/window.ts</code></td>
+<td>ウィンドウ操作ツール 6 個（find/list/info/click/type/key）</td>
+<td>構造化パラメータ</td>
+<td>Win32 メッセージ送信結果</td>
+<td>win32</td>
+</tr>
+<tr>
+<td><code>.copilot-mcp/src/tools/window-screenshot.ts</code></td>
+<td>スクリーンショットツール 1 個</td>
+<td>windowId, outputPath?</td>
+<td>PNG ファイルまたは base64 画像</td>
+<td>win32, pngjs</td>
 </tr>
 <tr>
 <td><code>.copilot-mcp/src/tools/file.ts</code></td>
@@ -457,14 +508,14 @@ MCP サーバー — .copilot-mcp/src/index.ts
 </tr>
 <tr>
 <td><code>.copilot-mcp/src/tools/workspace.ts</code></td>
-<td><code>.copilot-docs/</code> / <code>.copilot-work/</code> 限定書き込み</td>
+<td><code>.copilot-docs/</code> / <code>.copilot-work/</code> 限定読み書き</td>
 <td>相対パス, content</td>
-<td>書き込み結果</td>
+<td>読み込み結果または書き込み結果</td>
 <td>Node.js fs/promises</td>
 </tr>
 <tr>
 <td><code>.copilot-mcp/src/tools/md2html.ts</code></td>
-<td>Markdown の HTML 化と検索 UI 生成</td>
+<td>Markdown の HTML 化と検索 UI 生成。Mermaid CDN スクリプトを含む</td>
 <td>sourcePath, outputPath</td>
 <td>HTML ファイル群</td>
 <td>markdown-it, Node.js fs/promises</td>
@@ -482,9 +533,11 @@ MCP サーバー — .copilot-mcp/src/index.ts
 <p>各モジュールは <code>ToolDefinition[]</code> をエクスポートする。<code>.copilot-mcp/src/index.ts</code> がこれらを結合し、<code>toolMap</code> に登録する。</p>
 <ul>
 <li>コマンド実行系は <code>executor.ts</code> を経由して OS プロセスを起動する</li>
+<li>ビルド/テスト系ツールは <code>parsers.ts</code> でエラー・テスト結果をパースし、<code>formatBuildResult</code> で構造化 JSON（BuildResult）を返す</li>
 <li>管理領域書き込み系は <code>.copilot-docs/</code> と <code>.copilot-work/</code> への相対パスだけを受け付ける</li>
-<li><code>md2html</code> は Markdown ファイルまたはディレクトリを受け取り、<code>.copilot-docs-html/</code> などの静的 HTML 出力を生成する</li>
+<li><code>md2html</code> は Markdown ファイルまたはディレクトリを受け取り、<code>.copilot-docs-html/</code> などの静的 HTML 出力を生成する。Mermaid 図は CDN スクリプトでクライアントサイド描画される</li>
 <li>構造化ファイル操作系は JSON、YAML、XML、TOML、INI を読み書きし、JSONPath によるピンポイント操作も提供する</li>
+<li>ウィンドウ操作系は <code>win32.ts</code> の FFI バインディング層を経由して Win32 API を呼び出す（Windows 限定、条件付き動的 import）</li>
 </ul>
 <h3>セキュリティモデル</h3>
 <table>
@@ -540,6 +593,21 @@ MCP サーバー — .copilot-mcp/src/index.ts
 <td>大容量ファイル</td>
 <td>構造化ファイル操作に 10MB のファイルサイズ上限を設定</td>
 <td><code>src/tools/structured-file.ts</code></td>
+</tr>
+<tr>
+<td>ウィンドウ操作の範囲制限</td>
+<td>クリック座標をクライアント領域内に限定し、範囲外はエラー</td>
+<td><code>src/tools/window.ts</code></td>
+</tr>
+<tr>
+<td>HWND 有効性</td>
+<td><code>IsWindow</code> で HWND の有効性をチェックし、無効 HWND はエラー</td>
+<td><code>src/tools/window.ts</code>, <code>src/tools/window-screenshot.ts</code></td>
+</tr>
+<tr>
+<td>正規表現インジェクション</td>
+<td><code>window_find</code> の titlePattern はリテラルエスケープして部分一致に変換</td>
+<td><code>src/tools/window.ts</code></td>
 </tr>
 </tbody>
 </table>
@@ -605,5 +673,9 @@ MCP サーバー — .copilot-mcp/src/index.ts
           });
         }
       </script>
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({ startOnLoad: true });
+    </script>
   </body>
 </html>

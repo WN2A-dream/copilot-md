@@ -10,6 +10,18 @@ const markdown = new MarkdownIt({
   typographer: true,
 });
 
+const defaultFenceRenderer = markdown.renderer.rules.fence;
+markdown.renderer.rules.fence = (tokens, idx, options, env, self) => {
+  const token = tokens[idx];
+  if (token.info.trim().toLowerCase() === "mermaid") {
+    return `<pre class="mermaid">${escapeHtml(token.content)}</pre>`;
+  }
+  if (defaultFenceRenderer) {
+    return defaultFenceRenderer(tokens, idx, options, env, self);
+  }
+  return self.renderToken(tokens, idx, options);
+};
+
 const defaultLinkOpenRenderer = markdown.renderer.rules.link_open;
 
 markdown.renderer.rules.link_open = (tokens, idx, options, env, self) => {
@@ -304,6 +316,12 @@ function buildDocumentHtml(page: RenderedPage, pages: RenderedPage[], includeSea
         color: #f8f1e4;
       }
 
+      article pre.mermaid {
+        background: transparent;
+        color: var(--ink);
+        text-align: center;
+      }
+
       article code {
         font-family: "Cascadia Code", Consolas, monospace;
       }
@@ -351,6 +369,10 @@ function buildDocumentHtml(page: RenderedPage, pages: RenderedPage[], includeSea
       </main>
     </div>
     ${searchScript}
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({ startOnLoad: true });
+    </script>
   </body>
 </html>`;
 }

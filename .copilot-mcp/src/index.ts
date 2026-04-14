@@ -13,17 +13,32 @@ import { gradleTools } from "./tools/gradle.js";
 import { dotnetTools } from "./tools/dotnet.js";
 import { fileTools } from "./tools/file.js";
 import { javaTools } from "./tools/java.js";
+import { npmTools } from "./tools/npm.js";
 import { md2htmlTools } from "./tools/md2html.js";
 import { workspaceTools } from "./tools/workspace.js";
 import { structuredFileTools } from "./tools/structured-file.js";
 import type { z } from "zod";
+
+// Windows 限定ツール（非 Windows 環境ではスキップ）
+let windowTools: ToolDefinition[] = [];
+let screenshotTools: ToolDefinition[] = [];
+
+if (process.platform === "win32") {
+  const windowMod = await import("./tools/window.js");
+  const screenshotMod = await import("./tools/window-screenshot.js");
+  windowTools = windowMod.windowTools;
+  screenshotTools = screenshotMod.screenshotTools;
+}
+
+type TextContent = { type: "text"; text: string };
+type ImageContent = { type: "image"; data: string; mimeType: string };
 
 interface ToolDefinition {
   name: string;
   description: string;
   inputSchema: z.ZodType;
   handler: (args: unknown, config: Config) => Promise<{
-    content: { type: "text"; text: string }[];
+    content: (TextContent | ImageContent)[];
     isError?: boolean;
   }>;
 }
@@ -34,10 +49,13 @@ const allTools: ToolDefinition[] = [
   ...gradleTools,
   ...dotnetTools,
   ...javaTools,
+  ...npmTools,
   ...fileTools,
   ...md2htmlTools,
   ...workspaceTools,
   ...structuredFileTools,
+  ...screenshotTools,
+  ...windowTools,
 ];
 
 const toolMap = new Map<string, ToolDefinition>();
