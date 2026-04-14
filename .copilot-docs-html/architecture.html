@@ -230,39 +230,66 @@
     Orch --&gt; Test
     Orch --&gt; Rev
     Orch --&gt; Doc
-</pre><h3>タスクモード</h3>
-<p>orchestrator はタスク種別に応じて4つのモードを使い分ける。</p>
+</pre><h3>統一フロー</h3>
+<p>orchestrator は4モード分岐（setup/design/investigation/development）を廃止し、<code>check_shortcut</code> + <code>run_unified_flow</code> の2層構造で統一的にタスクを処理する。</p>
 <table>
 <thead>
 <tr>
-<th>モード</th>
-<th>概要</th>
-<th>主なフロー</th>
+<th>フェーズ</th>
+<th>内容</th>
+<th>備考</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>setup</td>
-<td>ドキュメント整備、初期設定</td>
-<td>investigator → planner → documenter</td>
+<td>auto_mode 判定</td>
+<td>ユーザ入力からキーワード検出</td>
+<td>1リクエスト完走可能</td>
 </tr>
 <tr>
-<td>design</td>
-<td>要件ヒアリング、設計検討</td>
-<td>interviewer → planner</td>
+<td>ショートカット判定</td>
+<td>design-only / investigation-only を検出</td>
+<td>該当しなければ統一フローへ</td>
 </tr>
 <tr>
-<td>investigation</td>
-<td>コードベース調査のみ</td>
+<td>splitter</td>
+<td>タスク規模判定・分割</td>
+<td>—</td>
+</tr>
+<tr>
 <td>investigator</td>
+<td>コードベース調査</td>
+<td>splitter 分割後のスコープで実行</td>
 </tr>
 <tr>
-<td>development</td>
-<td>コード実装・修正</td>
-<td>investigator → planner → developer → tester → reviewer → documenter</td>
+<td>planner</td>
+<td>実装計画作成</td>
+<td>—</td>
+</tr>
+<tr>
+<td>developer</td>
+<td>コード実装</td>
+<td>—</td>
+</tr>
+<tr>
+<td>tester + reviewer</td>
+<td>テスト実行とコードレビュー</td>
+<td><strong>並列実行</strong></td>
+</tr>
+<tr>
+<td>ユーザ確認</td>
+<td>結果確認（auto_mode 時はスキップ）</td>
+<td>—</td>
+</tr>
+<tr>
+<td>documenter</td>
+<td>ドキュメント更新</td>
+<td>分割判定付き</td>
 </tr>
 </tbody>
 </table>
+<h4>ショートカット</h4>
+<p>design-only と investigation-only のタスクはショートカットで早期完了する。ショートカットに該当しない場合は統一フローにフォールスルーする。auto_mode 時はショートカット判定をスキップし、即座に統一フローへ進む。</p>
 <h3>ファイルベース IPC</h3>
 <p>エージェント間のデータ受け渡しは <code>.copilot-work/[task-id]/</code> 以下のファイルを介して行う。プロンプトには <strong>タスク ID・タスク内容・入力ファイルパス</strong> のみを含め、調査結果や計画内容はファイル参照で渡す。</p>
 <pre class="mermaid">flowchart LR
@@ -274,6 +301,9 @@
         D[devs/dev*.md]
         T[test-report.md]
         R[review.md]
+        RC[review-correctness.md]
+        RM[review-maintainability.md]
+        RR[review-readability.md]
     end
 
     interviewer --&gt; H
@@ -283,6 +313,9 @@
     developer --&gt; D
     tester --&gt; T
     reviewer --&gt; R
+    reviewer --&gt;|観点別| RC
+    reviewer --&gt;|観点別| RM
+    reviewer --&gt;|観点別| RR
 
     H --&gt; planner
     P --&gt; planner
@@ -293,7 +326,8 @@
     D --&gt; reviewer
     T --&gt; reviewer
     R --&gt; planner
-</pre><h3>コンテキスト節約戦略</h3>
+</pre><p>観点別レビュー時は <code>review-correctness.md</code>、<code>review-maintainability.md</code>、<code>review-readability.md</code> に分離出力され、orchestrator の <code>aggregate_reviews</code> が統合 <code>review.md</code> を生成する。</p>
+<h3>コンテキスト節約戦略</h3>
 <table>
 <thead>
 <tr>
@@ -307,8 +341,12 @@
 <td>調査結果・計画内容をプロンプトに含めず、パスで参照させる</td>
 </tr>
 <tr>
-<td>並列実行</td>
-<td>依存関係のないサブエージェント呼び出しを並列化する</td>
+<td>tester + reviewer 並列化</td>
+<td>互いに依存しない tester と reviewer をフェーズ内並列で実行する</td>
+</tr>
+<tr>
+<td>auto_mode</td>
+<td>確認ゲートをスキップし、1リクエストでタスクを完走させる</td>
 </tr>
 <tr>
 <td>集約呼び出し</td>
@@ -322,14 +360,15 @@
 </table>
 <h3>エージェント間依存関係</h3>
 <pre class="mermaid">graph LR
-    Inv[investigator] --&gt; Plan[planner]
+    Split[splitter] --&gt; Inv[investigator]
+    Inv --&gt; Plan[planner]
     Plan --&gt; Dev[developer]
     Dev --&gt; Test[tester]
     Dev --&gt; Rev[reviewer]
-    Test --&gt; Rev
     Rev --&gt;|ng| Plan
     Rev --&gt;|ok| Doc[documenter]
-</pre><h2>MCP サーバーアーキテクチャ</h2>
+</pre><p>tester と reviewer は developer の出力に依存するが、互いには依存しないため並列実行される。reviewer が ng の場合、planner に戻って再計画する。</p>
+<h2>MCP サーバーアーキテクチャ</h2>
 <p>local-command MCP サーバーは、シェルコマンド実行・管理領域書き込み・Markdown 変換・構造化データファイル操作・ウィンドウ操作を構造化パラメータで提供する。</p>
 <h3>技術スタック</h3>
 <table>

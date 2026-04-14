@@ -193,10 +193,11 @@
       </section>
         <article>
           <h1>運用・操作フロー</h1>
-<p>ユーザが orchestrator を中心に開発タスクを進めるときの操作ガイド。追加指示や再計画の戻り方も含めて現在の流れを示す。</p>
+<p>ユーザが orchestrator を中心に開発タスクを進めるときの操作ガイド。auto_mode や追加指示、再計画の戻り方も含めて現在の流れを示す。</p>
 <h2>この資料で分かること</h2>
 <ul>
 <li>開発タスク依頼の手順</li>
+<li>auto_mode による1リクエスト完走</li>
 <li>追加指示、再計画、HTML ドキュメント生成までの流れ</li>
 </ul>
 <h2>関連資料</h2>
@@ -217,12 +218,14 @@
 <ol>
 <li>Copilot Chat で orchestrator を呼び出す。</li>
 <li>実装したい内容、制約、避けたいことを自然言語で伝える。</li>
-<li>orchestrator がタスク種別を判定し、必要に応じて interviewer や investigator を呼び出す。</li>
-<li>planner が plan を提示したら、<code>ok</code> か、修正指示か、追加指示か、追加指示ファイルの有無かを返す。</li>
-<li><code>ok</code> の場合、developer、tester、reviewer が順に進む。</li>
-<li>reviewer が <code>ng</code> を返した場合、orchestrator は <a href="http://preferences.md">preferences.md</a> を維持したまま planner に戻す。</li>
-<li>reviewer が <code>ok</code> を返した場合、全サブタスクの結果を集約して documenter が <code>.copilot-docs/</code> を更新し、<code>.copilot-docs-html/</code> を再生成する。</li>
-<li>最終結果に対して追加指示があれば、orchestrator が interviewer を使って整理し、最初の分類からやり直す。</li>
+<li>orchestrator がショートカット判定を行い、design-only / investigation-only でなければ統一フローへ進む。</li>
+<li>splitter がタスク規模を判定し、必要に応じて分割する。</li>
+<li>investigator が現状を調査し、planner が plan を提示する。</li>
+<li>plan を確認し、<code>ok</code> か、修正指示か、追加指示を返す。</li>
+<li><code>ok</code> の場合、developer が実装し、tester と reviewer が並列で評価する。</li>
+<li>テスト失敗・レビュー NG の場合、investigator に戻ってリトライする。</li>
+<li>全サブタスクが ok になると、documenter が <code>.copilot-docs/</code> を更新し、<code>.copilot-docs-html/</code> を再生成する。</li>
+<li>最終結果に対して追加指示があれば、orchestrator が interviewer を使って整理し、フローをやり直す。</li>
 </ol>
 <h3>結果</h3>
 <ul>
@@ -230,6 +233,53 @@
 <li><code>.copilot-docs/</code> が更新される</li>
 <li><code>.copilot-docs-html/</code> が再生成され、一覧検索とページ内検索で閲覧できる</li>
 </ul>
+<h2>auto_mode</h2>
+<h3>目的</h3>
+<p>1リクエストでタスクを完走させる。ユーザ確認ゲートをスキップし、テスト失敗・レビュー NG 時は自動リトライする。</p>
+<h3>使い方</h3>
+<p>タスク依頼時に auto_mode を示すキーワード（例: 「自動で」「一気に」等）を含めると、orchestrator が auto_mode を検出する。</p>
+<h3>動作の違い</h3>
+<table>
+<thead>
+<tr>
+<th>ゲート</th>
+<th>通常モード</th>
+<th>auto_mode</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ショートカット判定</td>
+<td>design-only / investigation-only を検出</td>
+<td>スキップ（即統一フローへ）</td>
+</tr>
+<tr>
+<td>plan 確認</td>
+<td>ユーザに確認を求める</td>
+<td>自動承認</td>
+</tr>
+<tr>
+<td>テスト失敗</td>
+<td>ユーザに対応を確認</td>
+<td>investigator に自動リトライ（MAX_RETRY まで）</td>
+</tr>
+<tr>
+<td>レビュー NG</td>
+<td>ユーザに対応を確認</td>
+<td>investigator に自動リトライ（MAX_RETRY まで）</td>
+</tr>
+<tr>
+<td>最終確認</td>
+<td>ユーザに結果を報告</td>
+<td>スキップして documenter へ</td>
+</tr>
+<tr>
+<td>MAX_RETRY 超過</td>
+<td>—</td>
+<td>自動停止</td>
+</tr>
+</tbody>
+</table>
 <h2>追加指示の返し方</h2>
 <table>
 <thead>
@@ -281,14 +331,17 @@
 <h3>手順</h3>
 <ol>
 <li>orchestrator にセットアップ内容を依頼する。</li>
-<li>investigator が現状を調査する。</li>
-<li>planner がドキュメント更新計画を作成する。</li>
+<li>orchestrator がタスクを正規化し、統一フローで処理する。</li>
+<li>investigator が現状を調査し、planner が計画を作成する。</li>
+<li>developer が実装し、tester + reviewer が評価する。</li>
 <li>documenter が <code>.copilot-docs/</code> を更新し、<code>.copilot-docs-html/</code> を再生成する。</li>
 </ol>
 <h3>結果</h3>
 <ul>
 <li>共有制御ルート配下の <code>.copilot-docs/</code> と <code>.copilot-docs-html/</code> が最新化される</li>
 </ul>
+<h3>補足</h3>
+<p>以前はセットアップタスク専用の簡略フロー（developer/reviewer スキップ）があったが、統一フロー化により全タスクが同じフローを通るようになった。</p>
 
         </article>
       </main>

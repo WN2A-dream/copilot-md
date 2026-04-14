@@ -193,10 +193,11 @@
       </section>
         <article>
           <h1>AI エージェント一覧と開発フロー</h1>
-<p><code>agents/</code> 配下のエージェント定義と <code>instructions/</code> 配下の指示書の詳細を説明する。</p>
+<p><code>agents/</code> 配下のエージェント定義と <code>instructions/</code> 配下の指示書、<code>skills/</code> 配下のスキル定義の詳細を説明する。</p>
 <h2>この資料で分かること</h2>
 <ul>
 <li>各エージェントの責務、入出力、呼び出しタイミング</li>
+<li>スキル定義の役割と適用方法</li>
 <li>指示書の適用対象と優先順位</li>
 <li>エージェント間の依存関係とデータの流れ</li>
 </ul>
@@ -218,7 +219,7 @@
 <tbody>
 <tr>
 <td>orchestrator</td>
-<td>タスク管理、サブエージェント呼び出し、再計画ループ</td>
+<td>タスク管理、サブエージェント呼び出し、統一フロー制御</td>
 <td>可</td>
 </tr>
 <tr>
@@ -253,7 +254,7 @@
 </tr>
 <tr>
 <td>reviewer</td>
-<td>コードレビュー</td>
+<td>コードレビュー（観点別分割対応）</td>
 <td>不可</td>
 </tr>
 <tr>
@@ -291,11 +292,22 @@
 <td>サブエージェント呼び出し、最終結果報告</td>
 </tr>
 <tr>
-<td>モード</td>
-<td>setup, design, investigation, development</td>
+<td>フロー構造</td>
+<td><code>check_shortcut</code> + <code>run_unified_flow</code> の2層構造</td>
 </tr>
 </tbody>
 </table>
+<h4>統一フロー</h4>
+<p>4モード分岐（setup/design/investigation/development）を廃止し、以下の統一フローで処理する。</p>
+<ol>
+<li><strong>auto_mode 判定</strong> — ユーザ入力からキーワード検出で自動実行モードを判定</li>
+<li><strong>ショートカット判定</strong> — design-only / investigation-only を検出、該当しなければ統一フローへ</li>
+<li><strong>統一フロー</strong> — splitter → investigator → planner → developer → tester + reviewer（並列） → documenter</li>
+</ol>
+<h4>ユーザ確認ゲート</h4>
+<p>orchestrator は各フェーズにユーザ確認ゲート（G1〜G6）を配置し、auto_mode 時はゲートをスキップする。テスト失敗・レビュー NG 時は auto_mode でも investigator に自動リトライし、MAX_RETRY 超過で自動停止する。</p>
+<h4>レビューのサイズ判定</h4>
+<p>変更ファイル数が <code>REVIEW_SPLIT_THRESHOLD</code>（10）を超える場合、3つのスキルファイルを使って reviewer を3回並列呼び出しし、<code>aggregate_reviews</code> で統合する。</p>
 <h4>呼び出しタイミング</h4>
 <ul>
 <li>ユーザが Copilot Chat でタスクを依頼したとき</li>
@@ -330,7 +342,7 @@
 </table>
 <h4>呼び出しタイミング</h4>
 <ul>
-<li>orchestrator がタスク規模を判定するとき</li>
+<li>orchestrator が統一フローの最初でタスク規模を判定するとき</li>
 </ul>
 <h3>interviewer</h3>
 <p>ユーザから要件を聞き出し、明確化する。ヒアリング結果と継続的な嗜好を記録する。</p>
@@ -358,17 +370,13 @@
 <td>出力</td>
 <td><code>.copilot-work/[task-id]/hearing.md</code>, <code>.copilot-work/[task-id]/preferences.md</code></td>
 </tr>
-<tr>
-<td>モード</td>
-<td>development, design</td>
-</tr>
 </tbody>
 </table>
 <h4>呼び出しタイミング</h4>
 <ul>
-<li>要件が不明確でヒアリングが必要なとき</li>
+<li>design-only ショートカットでの設計ヒアリング（非 auto_mode）</li>
+<li>手戻り時の情報補完</li>
 <li>ユーザが追加指示を整理したいとき</li>
-<li>継続的な嗜好の記録が必要なとき</li>
 </ul>
 <h3>investigator</h3>
 <p>コードベースを調査し、実装に必要な情報を収集する。</p>
@@ -400,8 +408,8 @@
 </table>
 <h4>呼び出しタイミング</h4>
 <ul>
-<li>実装計画の前に現状把握が必要なとき</li>
-<li>調査のみのタスクを実行するとき</li>
+<li>統一フローで splitter の後に実行</li>
+<li>テスト失敗・レビュー NG 時のリトライ</li>
 </ul>
 <h3>planner</h3>
 <p>調査結果に基づいて実装計画を作成する。レビュー ng 時は再計画を行う。</p>
@@ -466,7 +474,7 @@
 </table>
 <h4>呼び出しタイミング</h4>
 <ul>
-<li>ユーザが plan に ok を返したとき</li>
+<li>planner の計画承認後（auto_mode 時は自動進行）</li>
 </ul>
 <h3>tester</h3>
 <p>テストを実行し、失敗時は修正を行う。BuildResult 構造化レスポンスの <code>errors</code>、<code>testSummary</code>、<code>rawOutput</code> を活用して効率的にビルド→修正ループを回す。</p>
@@ -502,10 +510,10 @@
 </table>
 <h4>呼び出しタイミング</h4>
 <ul>
-<li>developer の実装完了後</li>
+<li>developer の実装完了後（reviewer と並列実行）</li>
 </ul>
 <h3>reviewer</h3>
-<p>コードレビューを行い、問題があれば再計画を要求する。</p>
+<p>コードレビューを行い、問題があれば再計画を要求する。<code>skill_filepath</code> パラメータにより観点別レビューに対応する。</p>
 <table>
 <thead>
 <tr>
@@ -524,17 +532,51 @@
 </tr>
 <tr>
 <td>入力</td>
-<td><code>devs/dev[n].md</code>, <code>test-report.md</code>, <code>preferences.md</code></td>
+<td><code>devs/dev[n].md</code>, <code>test-report.md</code>, <code>preferences.md</code>, スキルファイル（観点別時）</td>
 </tr>
 <tr>
 <td>出力</td>
-<td><code>.copilot-work/[task-id]/review.md</code></td>
+<td><code>.copilot-work/[task-id]/review.md</code>（全観点）または <code>review-{aspect}.md</code>（観点別）</td>
+</tr>
+<tr>
+<td>返り値</td>
+<td><code>status</code>（ok/ng）, <code>issues</code>（指摘事項リスト）</td>
+</tr>
+</tbody>
+</table>
+<h4>観点別レビュー</h4>
+<p><code>skill_filepath</code> が指定された場合、該当スキルのカテゴリのみレビューし、出力先を <code>review-{aspect_name}.md</code> に分離する。未指定時は従来どおり全カテゴリをレビューし <code>review.md</code> に出力する。</p>
+<h4>レビュー観点</h4>
+<table>
+<thead>
+<tr>
+<th>カテゴリ</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>正確性</td>
+<td>要件整合、ロジック正確性</td>
+</tr>
+<tr>
+<td>セキュリティ</td>
+<td>OWASP Top 10</td>
+</tr>
+<tr>
+<td>保守性</td>
+<td>拡張性、構造的整合性</td>
+</tr>
+<tr>
+<td>可読性</td>
+<td>命名規則、コメント、一貫性</td>
 </tr>
 </tbody>
 </table>
 <h4>呼び出しタイミング</h4>
 <ul>
-<li>tester のテスト完了後（または developer の実装完了後）</li>
+<li>developer の実装完了後（tester と並列実行）</li>
+<li>観点別分割時は orchestrator が3回並列呼び出し</li>
 </ul>
 <h3>documenter</h3>
 <p>ドキュメントを更新し、HTML 版を生成する。</p>
@@ -566,8 +608,36 @@
 </table>
 <h4>呼び出しタイミング</h4>
 <ul>
-<li>全サブタスクの reviewer が ok を返した後（1回のみ）</li>
+<li>全サブタスクの reviewer が ok を返した後（分割判定付きで1回呼び出し）</li>
 </ul>
+<h2>スキル定義</h2>
+<p><code>skills/</code> 配下にレビュー観点別のスキルファイルを配置する。reviewer が <code>skill_filepath</code> で参照し、レビュー対象カテゴリを絞り込む。</p>
+<table>
+<thead>
+<tr>
+<th>ファイル</th>
+<th>観点</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>skills/review-correctness.md</code></td>
+<td>正確性</td>
+<td>正確性・要件整合・セキュリティ（OWASP Top 10）</td>
+</tr>
+<tr>
+<td><code>skills/review-maintainability.md</code></td>
+<td>保守性</td>
+<td>保守性・拡張性</td>
+</tr>
+<tr>
+<td><code>skills/review-readability.md</code></td>
+<td>可読性</td>
+<td>可読性・一貫性</td>
+</tr>
+</tbody>
+</table>
 <h2>指示書一覧</h2>
 <table>
 <thead>
@@ -679,12 +749,17 @@
 <tr>
 <td>tester</td>
 <td><code>.copilot-work/[task-id]/test-report.md</code></td>
-<td>reviewer</td>
+<td>orchestrator（判定用）</td>
 </tr>
 <tr>
 <td>reviewer</td>
 <td><code>.copilot-work/[task-id]/review.md</code></td>
-<td>planner</td>
+<td>orchestrator → investigator（手戻り時）</td>
+</tr>
+<tr>
+<td>reviewer</td>
+<td><code>.copilot-work/[task-id]/review-{aspect}.md</code></td>
+<td>orchestrator（aggregate_reviews で統合）</td>
 </tr>
 <tr>
 <td>documenter</td>
@@ -701,46 +776,25 @@
 <li>繰り返し現れるルールは instructions / skills への昇格候補として扱う</li>
 </ul>
 <h2>開発フロー</h2>
-<p>通常の開発フローは次のループで進む。</p>
+<p>統一フローは次の流れで進む。ショートカット（design-only / investigation-only）に該当しない限り、全タスクがこのフローを通る。</p>
 <pre class="mermaid">flowchart TD
-    A[タスク受付] --&gt; B{タスク種別判定}
-    B --&gt;|setup| C[investigator → planner → documenter]
-    B --&gt;|design| D[interviewer → planner]
-    B --&gt;|investigation| E[investigator のみ]
-    B --&gt;|development| F[investigator]
+    A[タスク受付] --&gt; AA{auto_mode 判定}
+    AA --&gt; B{ショートカット判定}
+    B --&gt;|design-only| D[interviewer → planner]
+    B --&gt;|investigation-only| E[investigator のみ]
+    B --&gt;|該当なし| F[splitter → investigator]
 
     F --&gt; G[planner]
     G --&gt; H{plan 確認}
-    H --&gt;|ok| I[developer]
+    H --&gt;|ok / auto| I[developer]
     H --&gt;|ng/追加指示| G
-    I --&gt; J[tester]
-    J --&gt; K[reviewer]
-    K --&gt;|ok| L[documenter]
-    K --&gt;|ng| G
-    L --&gt; M[完了]
-</pre><h2>設計・調査・セットアップフロー</h2>
-<table>
-<thead>
-<tr>
-<th>種別</th>
-<th>概要</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>設計</td>
-<td>interviewer が詳細ヒアリングを行い、その結果をそのまま実装または文書化に接続する</td>
-</tr>
-<tr>
-<td>調査</td>
-<td>investigator の結果をもとに、実装へ進むか文書化だけで終えるかを選ぶ</td>
-</tr>
-<tr>
-<td>セットアップ</td>
-<td>investigator → planner → documenter の順でドキュメント整備を行い、HTML 版も再生成する</td>
-</tr>
-</tbody>
-</table>
+    I --&gt; J[tester + reviewer 並列]
+    J --&gt;|ok| K{ユーザ確認}
+    J --&gt;|ng| L[investigator リトライ]
+    L --&gt; G
+    K --&gt;|ok / auto| M[documenter]
+    M --&gt; N[完了]
+</pre><p>セットアップタスクは統一フロー内で正規化され、developer/reviewer スキップの特別扱いは廃止された。</p>
 
         </article>
       </main>

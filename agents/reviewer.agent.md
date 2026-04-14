@@ -26,13 +26,20 @@ user-invocable: false
 |---|---|
 | 正確性 | ロジックが仕様通りか / 境界値・エッジケース / 計算・型変換・文字列処理 / 条件分岐の網羅性 |
 | 要件整合 | 計画・preferences.md・UIガイドとの整合性 |
-| 保守性 | SOLID原則（SRP, OCP, LSP, ISP, DIP） / セキュリティ（OWASP Top 10） / パフォーマンス |
+| セキュリティ | OWASP Top 10 に該当する脆弱性 |
+| 保守性 | SOLID原則（SRP, OCP, LSP, ISP, DIP） / パフォーマンス |
 | 可読性 | 命名の明確さ（manager/helper等の曖昧名を避ける） / コメントの適切さ / 関数の短さ / ネストの浅さ |
 
 ## メインフロー
 
 ```pseudo
-function review(task_id, dev_result_filepath_array) -> ReviewResult:
+function review(task_id, dev_result_filepath_array, skill_filepath = null) -> ReviewResult:
+  // ── スキル読み込み（指定時のみ） ──
+  if skill_filepath != null:
+    review_categories = read(skill_filepath).categories
+  else:
+    review_categories = DEFAULT_ALL_CATEGORIES  // 従来どおり全カテゴリ
+
   // ── 変更ファイルの特定 ──
   all_changed_files = []
   for each dev_filepath in dev_result_filepath_array:
@@ -47,29 +54,47 @@ function review(task_id, dev_result_filepath_array) -> ReviewResult:
   for each file_info in all_changed_files:
     code = read(file_info.path)
 
-    // 各観点でチェック
-    issues.extend(check_correctness(code, file_info))
-    issues.extend(check_alignment(code, file_info, preferences, ui_guide))
-    issues.extend(check_maintainability(code, file_info))
-    issues.extend(check_readability(code, file_info))
+    // 各観点でチェック（review_categories に含まれるカテゴリのみ）
+    if "correctness" in review_categories:
+      issues.extend(check_correctness(code, file_info))
+      issues.extend(check_alignment(code, file_info, preferences, ui_guide))
+      issues.extend(check_security(code, file_info))
+    if "maintainability" in review_categories:
+      issues.extend(check_maintainability(code, file_info))
+    if "readability" in review_categories:
+      issues.extend(check_readability(code, file_info))
 
   // ── レビュー結果ファイル出力 ──
   review_result = if issues.is_empty() then "ok" else evaluate_severity(issues)
-  output_path = ".copilot-work/{task_id}/review.md"
-  call local-command/copilot_work_write(
-    workingDirectory,
-    path="{task_id}/review.md",
-    content=format_review(review_result, issues)
-  )
+
+  // skill_filepath が指定されている場合は観点別ファイルに出力（並列実行時の衝突回避）
+  if skill_filepath != null:
+    // スキルファイル名から観点名を抽出: "skills/review-correctness.md" → "correctness"
+    aspect_name = extract_aspect_name(skill_filepath)
+    output_path = ".copilot-work/{task_id}/review-{aspect_name}.md"
+    call local-command/copilot_work_write(
+      workingDirectory,
+      path="{task_id}/review-{aspect_name}.md",
+      content=format_review(review_result, issues)
+    )
+  else:
+    output_path = ".copilot-work/{task_id}/review.md"
+    call local-command/copilot_work_write(
+      workingDirectory,
+      path="{task_id}/review.md",
+      content=format_review(review_result, issues)
+    )
 
   // ── 返り値の構築 ──
+  // issues を返り値に含めることで、aggregate_reviews が集約時に参照可能
   if review_result == "ok":
-    return { "review-result": "ok" }
+    return { "review-result": "ok", "issues": [] }
   else:
     return {
       "review-result": "ng",
+      "issues": issues,
       "replan-task": "下記レビュー結果を踏まえて、修正してください\n\n"
-                   + "レビュー結果: .copilot-work/{task_id}/review.md\n"
+                   + "レビュー結果: " + output_path + "\n"
                    + "好み・方向性: .copilot-work/{task_id}/preferences.md"
     }
 ```
