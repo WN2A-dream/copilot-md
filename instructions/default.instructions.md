@@ -24,7 +24,9 @@ project-root/
       plans/          # 計画ファイル
       devs/           # 開発結果ファイル
       review.md       # レビューファイル
+      feedback.md     # エージェントが記録したフィードバック（作業用）
   .copilot-docs/      # プロジェクトドキュメント
+    feedback.md       # フレームワーク改善課題の集約（orchestrator が管理）
   .copilot-docs-html/ # documenter が生成するHTML版ドキュメント
     index.md          # .copilot-work/ の実装履歴を含めたドキュメントの目次
     architecture.md   # アーキテクチャ概要

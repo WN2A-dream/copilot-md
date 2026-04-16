@@ -22,6 +22,7 @@ user-invocable: false
 - `.copilot-docs/` の更新には **`local-command/copilot_docs_write`** を使う
 - ドキュメント更新後は **`local-command/md2html`** を呼び出し、`.copilot-docs-html/` を再生成する
 - UI に関する変更が含まれる場合は `.copilot-docs/ui-design.md` も更新対象として扱う
+- タスク完了時に `skills/feedback.md` の基準で自身の能力制限を評価し、課題があれば `.copilot-work/{task_id}/feedback.md` に追記する
 
 ## メインフロー
 

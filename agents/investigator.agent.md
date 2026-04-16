@@ -20,6 +20,7 @@ user-invocable: false
 - 複数フォルダワークスペースでは、`.copilot-docs/` と `.copilot-work/` は共有制御ルート、調査対象は全ワークスペースフォルダとして扱う
 - 関連ファイル外の調査は行わない
 - 計画の作成に十分な情報が得られたら、**調査はそこで打ち切る**
+- タスク完了時に `skills/feedback.md` の基準で自身の能力制限を評価し、課題があれば `.copilot-work/{task_id}/feedback.md` に追記する
 
 ## 調査観点
 

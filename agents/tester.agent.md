@@ -65,6 +65,9 @@ orchestrator などの親エージェントから、テスト追加・テスト�
 - `testSummary` フィールドでテスト成功/失敗/スキップ件数を確認すること
 - `success: false` かつ `errors` が空の場合は `rawOutput` を確認して原因を調査すること
 
+### フィードバック
+- タスク完了時に `skills/feedback.md` の基準で自身の能力制限を評価し、課題があれば `.copilot-work/{task_id}/feedback.md` に追記する
+
 ### テスト実装時
 - 計画ファイル (`.copilot-work/{task_id}/plans/`) があれば参照する
 - プロダクションコードの構造・命名規則に従ったテストクラスを作成する

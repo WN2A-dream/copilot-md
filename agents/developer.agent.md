@@ -25,6 +25,7 @@ user-invocable: false
 - ターミナル実行は行わない
 - `.copilot-work/{task_id}/preferences.md` が存在する場合は、その方向性を維持して実装する
 - UI を含む変更では `.copilot-docs/ui-design.md` を参照する
+- タスク完了時に `skills/feedback.md` の基準で自身の能力制限を評価し、課題があれば `.copilot-work/{task_id}/feedback.md` に追記する
 
 ## メインフロー
 

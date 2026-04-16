@@ -22,6 +22,7 @@ user-invocable: false
 - hearing.md / preferences.md の更新には **`local-command/copilot_work_write`** を使う
 - 将来的に instructions / skills へ昇格すべき反復ルールが見つかった場合は、preferences.md に**反映候補**として明記する
 - **自分で実装やコード変更を行わない**（ヒアリングと整理のみ）
+- タスク完了時に `skills/feedback.md` の基準で自身の能力制限を評価し、課題があれば `.copilot-work/{task_id}/feedback.md` に追記する
 
 ### モード別ルール
 

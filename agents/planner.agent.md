@@ -19,6 +19,7 @@ user-invocable: false
 - `.copilot-work/{task_id}/preferences.md` が存在する場合は、**再計画時も必ず優先**して方向性を維持する
 - UI を含む計画では `.copilot-docs/ui-design.md` を参照し、逸脱する場合は理由とドキュメント更新要否を計画に含める
 - 計画ファイルの出力には **`local-command/copilot_work_write`** を使う
+- タスク完了時に `skills/feedback.md` の基準で自身の能力制限を評価し、課題があれば `.copilot-work/{task_id}/feedback.md` に追記する
 
 ## メインフロー
 

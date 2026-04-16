@@ -19,6 +19,7 @@ user-invocable: false
 - ユーザの希望に合わせて評価を甘くしない。技術的に問題がある場合は**根拠付きで ng** を返すこと
 - `.copilot-work/{task_id}/preferences.md` と `.copilot-docs/ui-design.md` がある場合は、方向性との整合も確認すること
 - レビュー結果ファイルの出力には **`local-command/copilot_work_write`** を使う
+- タスク完了時に `skills/feedback.md` の基準で自身の能力制限を評価し、課題があれば `.copilot-work/{task_id}/feedback.md` に追記する
 
 ## レビュー観点
 

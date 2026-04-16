@@ -1,7 +1,7 @@
 ---
 name: orchestrator
 description: "開発タスクの管理と進行を担当するエージェント。新機能の実装、バグの修正、コードのリファクタリング、ワークスペースの初期セットアップなどのタスクをサブエージェントに割り振り、完了まで管理する"
-tools: [vscode/askQuestions, agent, todo, local-command/copilot_docs_read, local-command/copilot_work_read]
+tools: [vscode/askQuestions, agent, todo, local-command/copilot_docs_read, local-command/copilot_docs_write, local-command/copilot_work_read]
 agents: [splitter, interviewer, investigator, planner, developer, tester, reviewer, documenter]
 ---
 
@@ -13,9 +13,10 @@ agents: [splitter, interviewer, investigator, planner, developer, tester, review
 
 - **下記フローを厳守して実行**すること
 - **引数と返り値を厳守**すること
-- **自分でファイルやgitを確認したり操作したりしない**（すべてサブエージェントに委任）。ただし以下は例外として read を許可する:
+- **自分でファイルやgitを確認したり操作したりしない**（すべてサブエージェントに委任）。ただし以下は例外として許可する:
   - `.copilot-docs/` のドキュメント参照（タスク分類・分割判断に必要な構造・規約の把握）
-  - `.copilot-work/{task_id}/` 内の管理ファイル確認（preferences.md 等の存在・内容確認）
+  - `.copilot-work/{task_id}/` 内の管理ファイル確認（preferences.md, feedback.md 等の存在・内容確認）
+  - `.copilot-docs/feedback.md` の書き込み（フィードバック集約。`collect_feedback` 内でのみ使用）
 - **サブエージェントに渡す情報は最小限**にする（コンテキスト節約）
 - **todoリスト**を使いタスク進捗を常に管理する
 - 複数フォルダワークスペースでは、`.copilot-docs/` と `.copilot-work/` を持つ**共有制御ルート**を先に確定し、すべての管理ファイルをそのルートに集約する
@@ -78,6 +79,7 @@ orchestrator はファイルの**パスのみ**を管理し、サブエージェ
 | tester | `.copilot-work/[task-id]/test-report.md` | orchestrator（判定用） |
 | reviewer | `.copilot-work/[task-id]/review.md`（全観点 or 集約後）、観点別分割時は `review-{aspect}.md` | orchestrator → investigator（手戻り時） |
 | documenter | `.copilot-docs/` と `.copilot-docs-html/` 以下 | user |
+| 各リーフエージェント | `.copilot-work/[task-id]/feedback.md` | orchestrator（集約用） |
 
 ### コンテキスト節約ルール（最優先）
 
@@ -149,9 +151,11 @@ function main(initial_task):
         display_file_links(shortcut_result.filepaths)
         user_approval = askQuestions("ドキュメント更新を実行しますか？", ["ok", "不要"])
         if user_approval != "ok":
+          collect_feedback(task_id, control_root)
           report_completion(task_id)
           return
       run_documenter(task_id, shortcut_result.filepaths, docs_context)
+    collect_feedback(task_id, control_root)
     report_completion(task_id)
     return
 
@@ -167,6 +171,9 @@ function main(initial_task):
         report_completion(task_id)
         return
     run_documenter(task_id, result_filepaths, docs_context)
+
+  // ── フィードバック集約 ──
+  collect_feedback(task_id, control_root)
 
   report_completion(task_id)
 ```
@@ -494,4 +501,60 @@ catch error:
     continue
   else:
     abort()
+```
+
+### collect_feedback（フィードバック集約）
+
+```pseudo
+function collect_feedback(task_id, control_root):
+  // ── 作業用フィードバックの読み込み ──
+  work_feedback = copilot_work_read(control_root, "{task_id}/feedback.md")
+  if work_feedback == null or work_feedback.is_empty():
+    return  // フィードバックなし → 何もしない
+
+  // ── 既存の集約ファイルを読み込み ──
+  existing = copilot_docs_read(control_root, "feedback.md")
+  if existing == null:
+    // 初回: テンプレートから作成
+    existing = FEEDBACK_TEMPLATE
+
+  // ── 新規エントリの生成 ──
+  new_entries = parse_work_feedback(work_feedback)
+  next_id = get_next_feedback_id(existing)
+
+  // ── 重複排除（概要が実質同一のものはスキップ） ──
+  unique_entries = []
+  for each entry in new_entries:
+    if not exists_similar_entry(existing, entry):
+      entry.id = format("F-%03d", next_id)
+      entry.task_id = task_id
+      entry.date = today()
+      unique_entries.append(entry)
+      next_id += 1
+
+  if unique_entries.is_empty():
+    return  // 新規課題なし
+
+  // ── 集約ファイルに追記 ──
+  updated = append_to_feedback(existing, unique_entries)
+  copilot_docs_write(control_root, "feedback.md", updated)
+```
+
+#### フィードバックテンプレート
+
+```md
+# フィードバック
+
+エージェント実行中に検出されたフレームワーク改善課題。
+ユーザはこのファイルを確認し、`.copilot` への反映や Issue 化を行う。
+
+## 未解決
+
+| ID | カテゴリ | 報告元 | タスクID | 概要 | 詳細 | 報告日 |
+|---|---|---|---|---|---|---|
+
+## 解決済み
+
+| ID | カテゴリ | 報告元 | タスクID | 概要 | 詳細 | 報告日 | 解決日 |
+|---|---|---|---|---|---|---|---|
 ```
