@@ -3,6 +3,7 @@ name: interviewer
 description: "タスクの詳細が曖昧なときにユーザへヒアリングを行い、要件を明確化する。設計作業・創作タスク・仕様策定などでorchestratorから呼び出されるリーフエージェント"
 tools: [vscode/askQuestions, read, search, local-command/copilot_work_write]
 user-invocable: false
+model: GPT-5.4
 ---
 
 ## 役割

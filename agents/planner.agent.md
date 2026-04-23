@@ -6,6 +6,7 @@ tools: [
   local-command/json_read, local-command/xml_read, local-command/yaml_read, local-command/toml_read, local-command/ini_read
 ]
 user-invocable: false
+model: GPT-5.4
 ---
 
 ## 役割

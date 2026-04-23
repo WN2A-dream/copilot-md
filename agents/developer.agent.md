@@ -11,6 +11,7 @@ tools: [
   local-command/ini_read, local-command/ini_write
 ]
 user-invocable: false
+model: Claude Sonnet 4.6 (copilot)
 ---
 
 ## 役割

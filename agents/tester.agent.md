@@ -14,6 +14,7 @@ tools: [
   local-command/yaml_read, local-command/yaml_write
 ]
 user-invocable: false
+model: Claude Sonnet 4.6 (copilot)
 ---
 
 ## 役割
