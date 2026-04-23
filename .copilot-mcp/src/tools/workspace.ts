@@ -94,8 +94,8 @@ function createScopedReadTool(name: string, scopeDirectory: string, label: strin
 }
 
 export const workspaceTools = [
-  createScopedWriteTool("copilot_docs_write", ".copilot-docs", ".copilot-docs"),
-  createScopedWriteTool("copilot_work_write", ".copilot-work", ".copilot-work"),
-  createScopedReadTool("copilot_docs_read", ".copilot-docs", ".copilot-docs"),
-  createScopedReadTool("copilot_work_read", ".copilot-work", ".copilot-work"),
+  createScopedWriteTool("copilot_docs_write", ".agent-docs", ".agent-docs"),
+  createScopedWriteTool("copilot_work_write", ".agent-work", ".agent-work"),
+  createScopedReadTool("copilot_docs_read", ".agent-docs", ".agent-docs"),
+  createScopedReadTool("copilot_work_read", ".agent-work", ".agent-work"),
 ];
