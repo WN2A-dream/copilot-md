@@ -14,7 +14,7 @@ tools: [
   local-command/yaml_read, local-command/yaml_write
 ]
 user-invocable: false
-model: Claude Sonnet 4.6 (copilot)
+model: [Claude Opus 4.7 (copilot), Claude Sonnet 4.6 (copilot), GPT-5 mini (copilot)]
 ---
 
 ## 役割

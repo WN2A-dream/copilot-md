@@ -7,7 +7,7 @@ tools: [
   local-command/json_read, local-command/xml_read, local-command/yaml_read, local-command/toml_read, local-command/ini_read
 ]
 user-invocable: false
-model: Claude Sonnet 4.6 (copilot)
+model: [Claude Opus 4.7 (copilot), Claude Sonnet 4.6 (copilot), GPT-5 mini (copilot)]
 ---
 
 ## 役割

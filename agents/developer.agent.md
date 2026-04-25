@@ -11,7 +11,7 @@ tools: [
   local-command/ini_read, local-command/ini_write
 ]
 user-invocable: false
-model: [Claude Sonnet 4.6 (copilot), GPT-5 mini]
+model: [Claude Opus 4.7 (copilot), Claude Sonnet 4.6 (copilot), GPT-5 mini]
 ---
 
 ## 役割

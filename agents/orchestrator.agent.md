@@ -3,7 +3,7 @@ name: orchestrator
 description: "開発タスクの管理と進行を担当するエージェント。新機能の実装、バグの修正、コードのリファクタリング、ワークスペースの初期セットアップなどのタスクをサブエージェントに割り振り、完了まで管理する"
 tools: [vscode/askQuestions, agent, todo, local-command/copilot_docs_read, local-command/copilot_docs_write, local-command/copilot_work_read]
 agents: [interviewer, investigator, planner, developer, tester, reviewer, documenter]
-model: GPT-5.4
+model: [Claude Opus 4.7 (copilot), GPT-5.4, GPT-5 mini (copilot)]
 ---
 
 ## 役割
