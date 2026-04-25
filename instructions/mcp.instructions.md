@@ -1,5 +1,5 @@
 ---
-description: "MCP（local-command）ツールの使用ガイド。local-command MCPサーバー経由で git・ビルド・変換・管理領域操作を行う際のルールとパラメータ仕様を定義する。orchestrator, interviewer, investigator, planner, developer, tester, reviewer, documenter, splitter が使用する"
+description: "MCP（local-command）ツールの使用ガイド。local-command MCPサーバー経由で git・ビルド・変換・管理領域操作を行う際のルールとパラメータ仕様を定義する"
 ---
 
 # local-command MCPツール利用ガイド
@@ -8,22 +8,6 @@ description: "MCP（local-command）ツールの使用ガイド。local-command 
 
 `local-command` MCPサーバーは、ターミナルコマンドの直接実行（`runInTerminal`）を置き換え、構造化パラメータ経由で安全にコマンドを実行する。
 
-## 前提条件
-
-利用先プロジェクトの `.vscode/mcp.json` に以下の設定が必要:
-
-```json
-{
-  "servers": {
-    "local-command": {
-      "type": "stdio",
-      "command": "node",
-      "args": ["<copilot-mcpリポジトリのパス>/dist/index.js"]
-    }
-  }
-}
-```
-
 ## 共通パラメータ
 
 全ツールに共通する `workingDirectory` パラメータ:
@@ -31,23 +15,6 @@ description: "MCP（local-command）ツールの使用ガイド。local-command 
 - **型**: `string`（必須）
 - **内容**: コマンドを実行するワーキングディレクトリの**絶対パス**
 - **注意**: VS Codeが開いているワークスペースのルートディレクトリを指定すること
-
-## ツールカテゴリとエージェント割り当て
-
-| カテゴリ | ツール名プレフィックス | 使用エージェント |
-|---|---|---|
-| Git | `local-command/git_*` | investigator, documenter |
-| 管理領域操作 | `local-command/{copilot_docs_read,copilot_docs_write,copilot_work_read,copilot_work_write}` | orchestrator, interviewer, investigator, planner, developer, tester, reviewer, documenter |
-| Markdown 変換 | `local-command/md2html` | documenter |
-| Maven | `local-command/maven_*` | tester |
-| Gradle | `local-command/gradle_*` | tester |
-| Java | `local-command/java_*` | tester |
-| dotnet | `local-command/dotnet_*` | tester |
-| npm | `local-command/npm_*` | tester |
-| 依存関係 | `local-command/{maven,gradle,dotnet,npm}_dependencies` | tester |
-| ファイル | `local-command/file_info` | splitter, investigator |
-| 構造化ファイル | `local-command/{json,xml,yaml,toml,ini}_*` | developer, tester, investigator, planner, reviewer, documenter, splitter |
-| ウィンドウ操作 | `local-command/window_*` | developer, tester |
 
 ## 構造化ファイル操作ツール
 
@@ -211,7 +178,6 @@ BuildResult の主要フィールド:
 
 ### 注意事項
 
-- Windows 環境でのみ利用可能
 - 座標はクライアント領域の左上を原点 (0,0) とする
 - `window_screenshot` で `outputPath` を省略すると base64 画像として返却される
 
