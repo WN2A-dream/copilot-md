@@ -4,7 +4,7 @@ description: コードの正確性、保守性、可読性の観点でレビュ�
 tools: [vscode, execute, read, agent, edit, search, browser, todo]
 user-invocable: true
 agents: [reviewer, Explore]
-model: [Claude Sonnet 4.6 (copilot), GPT-5 mini (copilot)]
+model: [Claude Sonnet 4.6 (copilot), Claude Haiku 4.5 (copilot)]
 ---
 
 ## 役割(レビュー観点の指示が無い場合)

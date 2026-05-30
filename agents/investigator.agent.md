@@ -4,7 +4,7 @@ description: "コードベースの調査・分析・ドキュメント化を担
 tools: [read, search, edit, agent, todo, vscode, execute]
 agents: [Explore]
 user-invocable: true
-model: [Claude Sonnet 4.6 (copilot), GPT-5 mini (copilot)]
+model: [Claude Sonnet 4.6 (copilot), Claude Haiku 4.5 (copilot)]
 ---
 
 ## 役割

@@ -4,7 +4,7 @@ description: 指示の条件を満たすコードを実装する
 tools: [vscode, execute, read, agent, edit, search, browser, todo]
 user-invocable: false
 agents: [developer]
-model: [Claude Sonnet 4.6 (copilot), GPT-5 mini (copilot)]
+model: [Claude Sonnet 4.6 (copilot), Claude Haiku 4.5 (copilot)]
 ---
 
 ## 役割
