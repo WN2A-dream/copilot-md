@@ -24,19 +24,18 @@ applyTo: '**/*'
 ## 推奨ファイル構成
 
 - `.agent-docs/`：プロジェクトドキュメント
-  - design.md: 設計
-  - view.md: UI・UX構成
-  - class.md: クラス構成
-  - api.md: API仕様
-  - operation.md: 利用時操作フロー
+  - `index.md`：プロジェクト全体の概要とドキュメント構成の案内
+  - `design.md`：設計
+  - `view.md`：UI・UX構成
+  - `class.md`：クラス構成
+  - `api.md`：API仕様
+  - `operation.md`：利用時操作フロー
   - その他、詳細な説明をトピックごとに
   などのファイルに分けて整理
 - `.agent-work/`：タスク処理のための一時的なドキュメント
   - `[task_id]/`：タスクごとのサブディレクトリ
-    - `hearing.md`：interviewerエージェントがユーザからのヒアリング内容を記録するファイル
-    - `preferences.md`：interviewerエージェントがユーザの好みや要望を記録するファイル
-    - `dev{n}.md`：developerエージェントがコード変更内容を記録するファイル（複数回呼び出される可能性があるため、連番で管理）
-    - `feedback.md`：orchestratorがハーネスのフィードバックを提供するファイル
+    - `hearing{n}.md`：interviewerエージェントがユーザからのヒアリング内容を記録するファイル
+    - `feedback.md`：orchestratorがハーネスのフィードバックを提供するファイル。タスクに必要な権限やツールが不足していた場合や、ユーザの指示から傾向や好みが読み取れた場合に追記・編集
 
 ## 更新方針
 
